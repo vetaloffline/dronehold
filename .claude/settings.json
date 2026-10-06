@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(godot:*)"
+    ],
+    "deny": [
+      "Bash(gh pr merge *)",
+      "Bash(glab mr merge *)"
+    ],
+    "ask": [
+      "Bash(gh api *)",
+      "Bash(glab api *)",
+      "Bash(gh repo edit *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|mcp__gitlab__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-main.py\""
+          }
+        ]
+      }
+    ]
+  }
+}
