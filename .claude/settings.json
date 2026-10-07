@@ -8,19 +8,55 @@
       "Bash(godot:*)"
     ],
     "deny": [
+      "Bash(rm -rf *)",
+      "Bash(rm -fr *)",
+      "Bash(sudo *)",
+      "Bash(mkfs *)",
+      "Bash(dd *)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean *)",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Bash(security *)",
       "Bash(gh pr merge *)",
-      "Bash(glab mr merge *)"
+      "Read(./**/.env)",
+      "Read(./**/.env.*)",
+      "Read(./**/secrets/**)",
+      "Read(./**/*.pem)",
+      "Read(./**/*.key)",
+      "Read(./**/*.keystore)",
+      "Read(./**/*.jks)",
+      "Read(./**/export_credentials.cfg)",
+      "Read(~/.ssh/**)",
+      "Read(~/.gnupg/**)",
+      "Read(~/.aws/**)",
+      "Read(~/.git-credentials)",
+      "Read(~/.docker/config.json)",
+      "Read(~/.npmrc)",
+      "Read(~/Library/Keychains/**)",
+      "Edit(~/.zshrc)",
+      "Edit(~/.bashrc)",
+      "Edit(~/.ssh/**)"
     ],
     "ask": [
-      "Bash(gh api *)",
-      "Bash(glab api *)",
-      "Bash(gh repo edit *)"
+      "Bash(rm *)",
+      "Bash(kill *)",
+      "Bash(pkill *)",
+      "Bash(killall *)",
+      "Bash(brew install *)",
+      "Bash(npm install *)",
+      "Bash(pip install *)",
+      "Bash(pip3 install *)"
     ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "excludedCommands": ["gh *", "git push *", "git pull *", "git fetch *"]
   },
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash|mcp__gitlab__.*",
+        "matcher": "Bash",
         "hooks": [
           {
             "type": "command",
