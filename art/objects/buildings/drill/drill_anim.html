@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Бур — тест анімації</title>
+<!-- Відкривати з цієї папки: картинки беруться поруч (drill_body*.png, drill_arm_*.png).
+     Числа за замовчуванням = drill_rig.json; змінив повзунки — скопіюй параметри і онови rig. -->
+<style>
+  body { margin: 0; display: flex; height: 100vh; font: 13px system-ui, sans-serif; background: #1e2328; color: #ddd; }
+  #view { flex: 1; display: flex; align-items: center; justify-content: center; }
+  canvas { max-width: 100%; max-height: 100vh; }
+  #panel { width: 290px; padding: 14px; background: #262c33; overflow-y: auto; box-sizing: border-box; }
+  h3 { margin: 14px 0 6px; font-size: 13px; color: #8fd3ff; }
+  label { display: block; margin: 7px 0 2px; }
+  label span { float: right; color: #ffd27a; }
+  input[type=range] { width: 100%; }
+  button { width: 100%; padding: 7px; margin-top: 6px; background: #3a4450; color: #fff; border: 1px solid #556; border-radius: 4px; cursor: pointer; }
+  textarea { width: 100%; height: 120px; margin-top: 8px; background: #161a1e; color: #cfe; border: 1px solid #445; font: 11px monospace; }
+  #phase { color: #ffd27a; font-weight: bold; }
+  #msg { color: #ffb070; font-size: 12px; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div id="view"><canvas id="c" width="1800" height="1250"></canvas></div>
+<div id="panel">
+  <div>Фаза: <span id="phase"></span></div>
+  <button id="play">Пауза</button>
+  <div id="msg"></div>
+
+  <h3>Поза «піднято», °</h3>
+  <label>Плече <span id="v_u1"></span></label><input id="u1" type="range" min="-40" max="60" step="1">
+  <label>Лікоть <span id="v_u2"></span></label><input id="u2" type="range" min="-60" max="60" step="1">
+  <label>Зап'ясток <span id="v_u3"></span></label><input id="u3" type="range" min="-60" max="60" step="1">
+  <h3>Поза «свердлить», °</h3>
+  <label>Плече <span id="v_d1"></span></label><input id="d1" type="range" min="-40" max="60" step="1">
+  <label>Лікоть <span id="v_d2"></span></label><input id="d2" type="range" min="-60" max="60" step="1">
+  <label>Зап'ясток <span id="v_d3"></span></label><input id="d3" type="range" min="-60" max="60" step="1">
+  <h3>Час, с</h3>
+  <label>Опускання / підйом <span id="v_tMove"></span></label><input id="tMove" type="range" min="0.2" max="3" step="0.1">
+  <label>Свердлить <span id="v_tDrill"></span></label><input id="tDrill" type="range" min="0.5" max="6" step="0.1">
+  <label>Чекає вгорі <span id="v_tWait"></span></label><input id="tWait" type="range" min="0" max="6" step="0.1">
+  <label>Сила вібрації <span id="v_shake"></span></label><input id="shake" type="range" min="0" max="3" step="0.1">
+
+  <h3>Тінь руки (сонце справа вгорі)</h3>
+  <label>Зсув вліво на 1 px висоти <span id="v_sTx"></span></label><input id="sTx" type="range" min="-2" max="0" step="0.05">
+  <label>Зсув вниз на 1 px висоти <span id="v_sTy"></span></label><input id="sTy" type="range" min="-0.5" max="1" step="0.05">
+  <label>Товщина тіні <span id="v_sK"></span></label><input id="sK" type="range" min="0.2" max="1.5" step="0.05">
+  <label>Прозорість <span id="v_sOp"></span></label><input id="sOp" type="range" min="0" max="1" step="0.05">
+  <label>Розмиття, px <span id="v_sBlur"></span></label><input id="sBlur" type="range" min="0" max="20" step="1">
+
+  <h3>Перегляд</h3>
+  <label><input id="pivots" type="checkbox"> показати шарніри</label>
+  <textarea id="out" readonly></textarea>
+</div>
+<script>
+const SRC = { body: "drill_body.png", bodyShadow: "drill_body_shadow.png",
+              seg1: "drill_arm_1.png", seg2: "drill_arm_2.png", seg3: "drill_arm_3.png" };
+// everything below mirrors drill_rig.json (shared pixel space of all drill PNGs)
+const BODY_POS = { x: 0, y: 0 };
+const SHOULDER_GROUND = { x: 1010, y: 680 };                 // ground point right under the shoulder
+const SHOULDER = { x: 1000, y: 225 };                       // socket on the body
+const SEG1 = { pivot: { x: 615, y: 140 }, end: { x: 300, y: 275 } };   // shoulder -> elbow
+const SEG2 = { pivot: { x: 450, y: 405 }, end: { x: 308, y: 608 } };   // elbow -> wrist
+const SEG3 = { pivot: { x: 308, y: 608 }, end: { x: 100, y: 975 } };   // wrist -> drill tip
+const OFF = { x: 140, y: 120 };                              // sprite space -> canvas offset
+
+const P = { u1: 60, u2: -27, u3: 0, d1: -11, d2: -4, d3: 2, tMove: 0.4, tDrill: 2.5, tWait: 1, shake: 1.1,
+            sTx: -0.45, sTy: 0.2, sK: 0.7, sOp: 0.45, sBlur: 4 };
+const KEYS = Object.keys(P);
+
+const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+const img = {}; let loaded = 0; const NIMG = Object.keys(SRC).length;
+for (const k in SRC) {
+  img[k] = new Image();
+  img[k].onload = () => { if (++loaded === NIMG) start(); };
+  img[k].onerror = () => { document.getElementById("msg").textContent = "Не знайдено " + SRC[k] + " — відкрий сторінку з папки бура."; };
+  img[k].src = SRC[k];
+}
+
+// dark silhouettes of the arm parts, used for the arm's cast shadow
+const dark = {};
+function makeDark() {
+  for (const k of ["seg1", "seg2", "seg3"]) {
+    const c = document.createElement("canvas"); c.width = img[k].width; c.height = img[k].height;
+    const g = c.getContext("2d"); g.drawImage(img[k], 0, 0);
+    g.globalCompositeOperation = "source-in"; g.fillStyle = "rgb(3,11,26)"; g.fillRect(0, 0, c.width, c.height);
+    dark[k] = c;
+  }
+}
+const shadowCv = document.createElement("canvas"); shadowCv.width = cv.width; shadowCv.height = cv.height;
+
+const rad = d => d * Math.PI / 180;
+const rot = (v, a) => ({ x: v.x * Math.cos(a) - v.y * Math.sin(a), y: v.x * Math.sin(a) + v.y * Math.cos(a) });
+const add = (a, b) => ({ x: a.x + b.x, y: a.y + b.y });
+const sub = (a, b) => ({ x: a.x - b.x, y: a.y - b.y });
+const ease = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+const lerp = (a, b, t) => a + (b - a) * t;
+
+// Arm shadow, per joint:
+//  - every joint gets a ground point straight below it; its depth row is interpolated along the arm
+//    from the point under the shoulder (f = 0) to the drilling spot (f = 1), by arm length;
+//  - joint height h = groundY - jointY; its shadow lands at (x + sTx*h, groundY + sTy*h);
+//  - each segment is mapped by an affine that puts its two joints onto their shadow points
+//    (scale along the segment, sK = thickness across it).
+const len = v => Math.hypot(v.x, v.y);
+const L1 = len(sub(SEG1.end, SEG1.pivot)), L2 = len(sub(SEG2.end, SEG2.pivot)), L3 = len(sub(SEG3.end, SEG3.pivot));
+const FRAC = [0, L1 / (L1 + L2 + L3), (L1 + L2) / (L1 + L2 + L3), 1];
+function segShadowMatrix(Pj, Qj, Ps, Qs) {
+  const u0 = sub(Qj, Pj), lu = len(u0), u = { x: u0.x / lu, y: u0.y / lu }, n = { x: -u.y, y: u.x };
+  const v0 = sub(Qs, Ps), lv = len(v0), v = { x: v0.x / lv, y: v0.y / lv }, m = { x: -v.y, y: v.x };
+  const s = lv / lu, k = P.sK;
+  const a = s * v.x * u.x + k * m.x * n.x, b = s * v.x * u.y + k * m.x * n.y;
+  const c = s * v.y * u.x + k * m.y * n.x, d = s * v.y * u.y + k * m.y * n.y;
+  return [a, c, b, d, Ps.x - (a * Pj.x + b * Pj.y), Ps.y - (c * Pj.x + d * Pj.y)];  // canvas order
+}
+
+// forward kinematics: angles are relative to the drawn (assembled) pose, clockwise positive
+function rig(a1, a2, a3) {
+  const s = add(SHOULDER, OFF);
+  const elbow = add(s, rot(sub(SEG1.end, SEG1.pivot), a1));
+  const wrist = add(elbow, rot(sub(SEG2.end, SEG2.pivot), a1 + a2));
+  const tip = add(wrist, rot(sub(SEG3.end, SEG3.pivot), a1 + a2 + a3));
+  return { s, elbow, wrist, tip, A1: a1, A2: a1 + a2, A3: a1 + a2 + a3 };
+}
+
+function drawPart(im, pivot, at, ang) {
+  ctx.save(); ctx.translate(at.x, at.y); ctx.rotate(ang); ctx.drawImage(im, -pivot.x, -pivot.y); ctx.restore();
+}
+
+// dust & crystal chips from the drill tip
+const parts = [];
+function spawn(tip) {
+  for (let i = 0; i < 3; i++) {
+    const blue = Math.random() < 0.35;
+    parts.push({ x: tip.x + (Math.random() - 0.5) * 30, y: tip.y - 5, vx: (Math.random() - 0.5) * 260, vy: -120 - Math.random() * 220,
+                 life: 0.5 + Math.random() * 0.5, age: 0, r: blue ? 4 + Math.random() * 4 : 5 + Math.random() * 8,
+                 c: blue ? "120,200,255" : "120,105,90" });
+  }
+}
+function stepParts(dt) {
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i]; p.age += dt; if (p.age > p.life) { parts.splice(i, 1); continue; }
+    p.vy += 520 * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+  }
+}
+function drawParts() {
+  for (const p of parts) {
+    ctx.fillStyle = `rgba(${p.c},${(1 - p.age / p.life) * 0.9})`;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill();
+  }
+}
+
+let t0 = performance.now(), last = t0, playing = true, tPaused = 0;
+function phaseAt(t) {
+  const L = [["опускає", P.tMove], ["свердлить", P.tDrill], ["піднімає", P.tMove], ["чекає", P.tWait]];
+  const total = L.reduce((s, x) => s + x[1], 0); let k = t % total;
+  for (const [name, d] of L) { if (k < d) return { name, k: d ? k / d : 1 }; k -= d; }
+  return { name: "чекає", k: 1 };
+}
+
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const t = playing ? (now - t0) / 1000 : tPaused;
+  const ph = phaseAt(t);
+  const up = [P.u1, P.u2, P.u3].map(rad), dn = [P.d1, P.d2, P.d3].map(rad);
+  let m = 0;                                        // 0 = up, 1 = down
+  if (ph.name === "опускає") m = ease(ph.k); else if (ph.name === "свердлить") m = 1; else if (ph.name === "піднімає") m = 1 - ease(ph.k);
+  let a = up.map((u, i) => lerp(u, dn[i], m));
+  let jx = 0, jy = 0;
+  if (ph.name === "свердлить") {                    // vibration while drilling
+    const s = P.shake;
+    a[2] += rad(Math.sin(now * 0.09) * 1.2 * s);
+    a[1] += rad(Math.sin(now * 0.07 + 1) * 0.5 * s);
+    jx = Math.sin(now * 0.11) * 1.5 * s; jy = Math.cos(now * 0.13) * 1.0 * s;
+  }
+  const R = rig(a[0], a[1], a[2]);
+  if (ph.name === "свердлить" && playing) spawn(R.tip);
+  if (playing) stepParts(dt);
+
+  ctx.fillStyle = "#4e7056"; ctx.fillRect(0, 0, cv.width, cv.height);
+  const down = rig(dn[0], dn[1], dn[2]).tip;
+  // body cast shadow (drawn by Codex, separate layer)
+  ctx.drawImage(img.bodyShadow, OFF.x + BODY_POS.x, OFF.y + BODY_POS.y);
+  // arm cast shadow, per joint
+  const g0 = add(SHOULDER_GROUND, OFF);
+  const J = [R.s, R.elbow, R.wrist, R.tip];
+  const SP = J.map((j, i) => {
+    const gy = g0.y + FRAC[i] * (down.y - g0.y), h = gy - j.y;
+    return { x: j.x + P.sTx * h, y: gy + P.sTy * h };
+  });
+  const sg = shadowCv.getContext("2d");
+  sg.setTransform(1, 0, 0, 1, 0, 0); sg.clearRect(0, 0, shadowCv.width, shadowCv.height);
+  for (const [i, k, part, at, ang] of [[2, "seg3", SEG3, R.wrist, R.A3], [1, "seg2", SEG2, R.elbow, R.A2], [0, "seg1", SEG1, R.s, R.A1]]) {
+    sg.setTransform(...segShadowMatrix(J[i], J[i + 1], SP[i], SP[i + 1]));
+    sg.translate(at.x, at.y); sg.rotate(ang); sg.drawImage(dark[k], -part.pivot.x, -part.pivot.y);
+  }
+  ctx.save(); ctx.globalAlpha = P.sOp; if (P.sBlur) ctx.filter = `blur(${P.sBlur}px)`; ctx.drawImage(shadowCv, 0, 0); ctx.restore();
+  ctx.save(); ctx.translate(jx * 0.3, jy * 0.3); ctx.drawImage(img.body, OFF.x + BODY_POS.x, OFF.y + BODY_POS.y); ctx.restore();
+  ctx.save(); ctx.translate(jx, jy);
+  drawPart(img.seg3, SEG3.pivot, R.wrist, R.A3);
+  drawPart(img.seg2, SEG2.pivot, R.elbow, R.A2);
+  drawPart(img.seg1, SEG1.pivot, R.s, R.A1);
+  ctx.restore();
+  drawParts();
+  if (document.getElementById("pivots").checked) {
+    ctx.fillStyle = "#ff0"; for (const p of [R.s, R.elbow, R.wrist]) { ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, 7); ctx.fill(); }
+    ctx.fillStyle = "#f0f"; ctx.beginPath(); ctx.arc(R.tip.x, R.tip.y, 8, 0, 7); ctx.fill();
+  }
+  document.getElementById("phase").textContent = ph.name;
+  requestAnimationFrame(frame);
+}
+
+function start() {
+  for (const k of KEYS) {
+    const el = document.getElementById(k);
+    el.value = P[k];
+    const digits = k === "sTx" || k === "sTy" || k === "sOp" || k === "sK" ? 2 : (k.startsWith("t") || k === "shake" ? 1 : 0);
+    const show = () => { document.getElementById("v_" + k).textContent = (+P[k]).toFixed(digits); document.getElementById("out").value = JSON.stringify(P, null, 1); };
+    el.addEventListener("input", e => { P[k] = +e.target.value; show(); }); show();
+  }
+  makeDark();
+  document.getElementById("play").onclick = e => {
+    playing = !playing;
+    if (!playing) tPaused = (performance.now() - t0) / 1000; else t0 = performance.now() - tPaused * 1000;
+    e.target.textContent = playing ? "Пауза" : "Грати";
+  };
+  requestAnimationFrame(frame);
+}
+</script>
+</body>
+</html>
