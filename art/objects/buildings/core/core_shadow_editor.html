@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Редактор тіні — Core</title>
+<!-- Відкривати з цієї папки: картинки беруться поруч (core.png, core_shadow_cast.png, core_shadow_contact.png). -->
+<style>
+  body { margin: 0; display: flex; height: 100vh; font: 13px system-ui, sans-serif; background: #1e2328; color: #ddd; }
+  #view { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  canvas { max-width: 100%; max-height: 100vh; cursor: grab; }
+  canvas.drag { cursor: grabbing; }
+  #panel { width: 300px; padding: 14px; background: #262c33; overflow-y: auto; box-sizing: border-box; }
+  h3 { margin: 14px 0 6px; font-size: 13px; color: #8fd3ff; }
+  label { display: block; margin: 8px 0 2px; }
+  label span { float: right; color: #ffd27a; }
+  input[type=range] { width: 100%; }
+  .row { display: flex; gap: 6px; margin-top: 6px; }
+  button { flex: 1; padding: 7px; background: #3a4450; color: #fff; border: 1px solid #556; border-radius: 4px; cursor: pointer; }
+  button:hover { background: #4a5664; }
+  textarea { width: 100%; height: 150px; margin-top: 8px; background: #161a1e; color: #cfe; border: 1px solid #445; font: 11px monospace; }
+  .hint { color: #999; font-size: 12px; }
+  #msg { color: #ffb070; font-size: 12px; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div id="view"><canvas id="c" width="1536" height="1024"></canvas></div>
+<div id="panel">
+  <div class="hint">Тягни мишкою — рухаєш падаючу тінь. Колесо — масштаб тіні. Shift+колесо — нахил.</div>
+
+  <h3>Джерело падаючої тіні</h3>
+  <div class="row">
+    <button id="srcCodex">Тінь Codex</button>
+    <button id="srcSil">Силует будівлі</button>
+  </div>
+
+  <h3>Падаюча тінь</h3>
+  <label>Зсув X <span id="v_dx"></span></label><input id="dx" type="range" min="-600" max="600" step="1">
+  <label>Зсув Y <span id="v_dy"></span></label><input id="dy" type="range" min="-400" max="400" step="1">
+  <label>Масштаб X <span id="v_sx"></span></label><input id="sx" type="range" min="0.2" max="2.5" step="0.01">
+  <label>Масштаб Y (сплющити) <span id="v_sy"></span></label><input id="sy" type="range" min="0.05" max="2" step="0.01">
+  <label>Нахил (skew X) <span id="v_kx"></span></label><input id="kx" type="range" min="-3" max="3" step="0.01">
+  <label>Поворот, ° <span id="v_rot"></span></label><input id="rot" type="range" min="-180" max="180" step="1">
+  <label>Прозорість <span id="v_op"></span></label><input id="op" type="range" min="0" max="1" step="0.01">
+  <label>Розмиття, px <span id="v_blur"></span></label><input id="blur" type="range" min="0" max="40" step="1">
+
+  <h3>Контактна тінь (під будівлею)</h3>
+  <label>Прозорість <span id="v_cop"></span></label><input id="cop" type="range" min="0" max="1" step="0.01">
+
+  <h3>Перегляд</h3>
+  <label>Колір землі</label><input id="ground" type="color" value="#4e7056">
+  <label><input id="showPivot" type="checkbox" checked> показати точку опори</label>
+
+  <div class="row"><button id="reset">Скинути</button><button id="copy">Скопіювати параметри</button></div>
+  <div class="row"><button id="png">Зберегти PNG (прозорий фон)</button></div>
+  <div id="msg"></div>
+  <textarea id="out" readonly></textarea>
+</div>
+<script>
+const SRC = { building: "core.png", cast: "core_shadow_cast.png", contact: "core_shadow_contact.png" };
+const PIVOT = { x: 762, y: 992 };   // bottom centre of the building, transforms rotate/scale around it
+// Defaults = the approved core_shadow.png (cast layer as drawn by Codex, untouched)
+const DEF = { src: "codex", dx: 0, dy: 0, sx: 1, sy: 1, kx: 0, rot: 0, op: 1, blur: 0, cop: 1 };
+const DEF_SIL = { src: "sil", dx: -40, dy: 0, sx: 1, sy: 0.35, kx: 1.2, rot: 0, op: 0.45, blur: 8, cop: 1 };
+const KEYS = ["dx", "dy", "sx", "sy", "kx", "rot", "op", "blur", "cop"];
+let P = { ...DEF };
+
+const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+const W = cv.width, H = cv.height;
+const img = {};
+let loaded = 0;
+for (const k in SRC) {
+  img[k] = new Image();
+  img[k].onload = () => { if (++loaded === 3) init(); };
+  img[k].onerror = () => { document.getElementById("msg").textContent = "Не знайдено " + SRC[k] + " — відкрий сторінку з папки з картинками."; };
+  img[k].src = SRC[k];
+}
+
+// building silhouette tinted to the shadow colour
+const silCv = document.createElement("canvas"); silCv.width = W; silCv.height = H;
+function makeSil() {
+  const s = silCv.getContext("2d");
+  s.clearRect(0, 0, W, H);
+  s.drawImage(img.building, 0, 0);
+  s.globalCompositeOperation = "source-in";
+  s.fillStyle = "rgb(3,11,26)";
+  s.fillRect(0, 0, W, H);
+  s.globalCompositeOperation = "source-over";
+}
+
+function drawShadow(g) {
+  const srcImg = P.src === "sil" ? silCv : img.cast;
+  g.save();
+  g.globalAlpha = P.op;
+  if (P.blur > 0) g.filter = `blur(${P.blur}px)`;
+  g.translate(PIVOT.x + P.dx, PIVOT.y + P.dy);
+  g.rotate(P.rot * Math.PI / 180);
+  g.transform(1, 0, P.kx, 1, 0, 0);       // skew X: x' = x + kx * y (y is negative above the pivot)
+  g.scale(P.sx, P.sy);
+  g.translate(-PIVOT.x, -PIVOT.y);
+  g.drawImage(srcImg, 0, 0);
+  g.restore();
+  g.save(); g.globalAlpha = P.cop; g.drawImage(img.contact, 0, 0); g.restore();
+}
+
+function render() {
+  ctx.fillStyle = document.getElementById("ground").value;
+  ctx.fillRect(0, 0, W, H);
+  drawShadow(ctx);
+  ctx.drawImage(img.building, 0, 0);
+  if (document.getElementById("showPivot").checked) {
+    ctx.fillStyle = "#ff0"; ctx.beginPath(); ctx.arc(PIVOT.x, PIVOT.y, 6, 0, 7); ctx.fill();
+  }
+  for (const k of KEYS) {
+    document.getElementById(k).value = P[k];
+    document.getElementById("v_" + k).textContent = (+P[k]).toFixed(k === "dx" || k === "dy" || k === "rot" || k === "blur" ? 0 : 2);
+  }
+  document.getElementById("out").value = JSON.stringify(P, null, 1);
+}
+
+function init() {
+  makeSil();
+  for (const k of KEYS) {
+    document.getElementById(k).addEventListener("input", e => { P[k] = +e.target.value; render(); });
+  }
+  document.getElementById("ground").addEventListener("input", render);
+  document.getElementById("showPivot").addEventListener("change", render);
+  document.getElementById("srcCodex").onclick = () => { P = { ...DEF }; render(); };
+  document.getElementById("srcSil").onclick = () => { P = { ...DEF_SIL }; render(); };
+  document.getElementById("reset").onclick = () => { P = P.src === "sil" ? { ...DEF_SIL } : { ...DEF }; render(); };
+  document.getElementById("copy").onclick = () => {
+    const t = document.getElementById("out"); t.select(); navigator.clipboard?.writeText(t.value); document.execCommand("copy");
+  };
+  document.getElementById("png").onclick = () => {
+    const o = document.createElement("canvas"); o.width = W; o.height = H;
+    const g = o.getContext("2d"); drawShadow(g); g.drawImage(img.building, 0, 0);
+    try {
+      const a = document.createElement("a"); a.download = "core_with_shadow_edited.png"; a.href = o.toDataURL("image/png"); a.click();
+    } catch (e) {
+      // pages opened as file:// can't read canvas pixels back (tainted canvas)
+      document.getElementById("msg").textContent = "Браузер не дає зберегти PNG зі сторінки file:// — скопіюй параметри і скинь їх, я зберу PNG.";
+    }
+  };
+
+  // mouse: drag = move, wheel = scale, shift+wheel = skew
+  let drag = null;
+  const toCanvas = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height }; };
+  cv.addEventListener("mousedown", e => { drag = { m: toCanvas(e), dx: P.dx, dy: P.dy }; cv.classList.add("drag"); });
+  window.addEventListener("mousemove", e => {
+    if (!drag) return; const m = toCanvas(e);
+    P.dx = Math.round(drag.dx + m.x - drag.m.x); P.dy = Math.round(drag.dy + m.y - drag.m.y); render();
+  });
+  window.addEventListener("mouseup", () => { drag = null; cv.classList.remove("drag"); });
+  cv.addEventListener("wheel", e => {
+    e.preventDefault(); const d = e.deltaY < 0 ? 1 : -1;
+    if (e.shiftKey) P.kx = +(P.kx + d * 0.05).toFixed(2);
+    else { P.sx = +(P.sx * (1 + d * 0.03)).toFixed(3); P.sy = +(P.sy * (1 + d * 0.03)).toFixed(3); }
+    render();
+  }, { passive: false });
+  render();
+}
+</script>
+</body>
+</html>

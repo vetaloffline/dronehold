@@ -1,0 +1,89 @@
+{
+ "note": "pixel coords in one shared space: drill_arm_*.png are 1536x1024, drill_body*.png are 1800x1100, same origin; angles in degrees, clockwise positive, relative to the assembled pose",
+ "shoulder_on_body": [
+  1000,
+  225
+ ],
+ "seg1": {
+  "pivot": [
+   615,
+   140
+  ],
+  "end": [
+   300,
+   275
+  ],
+  "image": "drill_arm_1.png"
+ },
+ "seg2": {
+  "pivot": [
+   450,
+   405
+  ],
+  "end": [
+   308,
+   608
+  ],
+  "image": "drill_arm_2.png"
+ },
+ "seg3": {
+  "pivot": [
+   308,
+   608
+  ],
+  "tip": [
+   100,
+   975
+  ],
+  "image": "drill_arm_3.png"
+ },
+ "draw_order": [
+  "drill_body_shadow",
+  "arm_shadow",
+  "drill_body",
+  "drill_arm_3",
+  "drill_arm_2",
+  "drill_arm_1"
+ ],
+ "pose_up": {
+  "shoulder": 60,
+  "elbow": -27,
+  "wrist": 0
+ },
+ "pose_drill": {
+  "shoulder": -11,
+  "elbow": -4,
+  "wrist": 2
+ },
+ "timing_s": {
+  "move": 0.4,
+  "drill": 2.5,
+  "wait": 1
+ },
+ "shake": 1.1,
+ "body": {
+  "image": "drill_body.png",
+  "shadow": "drill_body_shadow.png",
+  "pos": [
+   0,
+   0
+  ]
+ },
+ "shoulder_ground": [
+  1010,
+  680
+ ],
+ "arm_shadow": {
+  "model": "per joint: ground row interpolated by arm length from shoulder_ground (f=0) to drill tip in drill pose (f=1); h = groundY - jointY; shadow = (x + tx*h, groundY + ty*h); each segment affine-mapped onto its joints' shadow points, thickness k",
+  "tx": -0.45,
+  "ty": 0.2,
+  "k": 0.7,
+  "opacity": 0.45,
+  "blur_px": 4,
+  "color": [
+   3,
+   11,
+   26
+  ]
+ }
+}

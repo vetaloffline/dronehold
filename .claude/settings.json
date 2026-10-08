@@ -51,7 +51,7 @@
   },
   "sandbox": {
     "enabled": true,
-    "excludedCommands": ["gh *", "git push *", "git pull *", "git fetch *"]
+    "excludedCommands": ["gh *", "git push *", "git pull *", "git fetch *", "codex exec *"]
   },
   "hooks": {
     "PreToolUse": [

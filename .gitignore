@@ -8,3 +8,10 @@
 
 # Claude Code local overrides
 .claude/settings.local.json
+
+# Secrets
+.env
+.env.*
+
+# AI art drafts (reviewed sprites get moved out)
+/art/drafts/
