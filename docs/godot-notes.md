@@ -78,6 +78,29 @@ CrystalVein (Node2D)
   отримує масштаб `drill_slot.scale` і цілиться в `HitPoint` (`auto_aim`: кут голови обчислюється
   так, щоб труба дивилась на ціль, плюс `head_offset`).
 
+## Слизень — `art/objects/enemies/slime/` (`slime_rig.json`)
+
+```
+Slime (Node2D)            position = точка біля ніг (pivot)
+  Shadow   (код)          еліпс shadow_ellipse, ширина × scale.x тіла
+  Body     Node2D         scale, skew — анімація; scale.x < 0 при русі вліво
+    Sprite Sprite2D       slime.png, offset = -pivot, centered = false
+    Eye1..3 Node2D        маска ока (clip_children), усередині — повіка
+```
+
+- **Цикл** (`crawl`): фаза `p += dt·rate/period`; `f(p) = -cos(2π·u)`, де `u` пробігає 0…0.5 за
+  частку `lunge` і 0.5…1 за решту. Ціль: `scale = (1 + stretch·f, 1 - squash·f)`; з `jelly > 0` —
+  пружина (`k = 40 + 360·jelly`, `c = 2√k·damp`). `skew = -deg_to_rad(lean)·f(p - leanPhase)·dir`.
+- **Рух «гусінь»:** за кадр зсув = `inch · W/2 · |Δscale_x| + slide · 64 · rate · dt` уздовж напрямку
+  (`W` — ширина слизня у px). Середня швидкість — `avgSpeed()` у тюнері; під швидкість з балансу:
+  `rate = speed / avgSpeed()`.
+- **Моргання** (`blink_s`): серія — очі в порядку `blink_order` з кроком `bGap`, кожне
+  закривається `bClose`, тримається `bHold`, відкривається `bOpen` (smoothstep); далі пауза
+  `bPause + randf()·bRand`. Повіка — еліпс `rx·1.2 × ry` кольору `lid`, центр
+  `y - 2·ry + 2·ry·closure`, обрізаний еліпсом ока мінус очі зі списку `over`.
+- Натовп сотнями: не по `Node2D` на кожного, а `MultiMeshInstance2D` + масив станів (AGENTS.md);
+  моргання тоді — окремим шаром або шейдером.
+
 ## Тюнери
 
 | Об'єкт | Тюнер | Що крутити |
@@ -86,5 +109,6 @@ CrystalVein (Node2D)
 | Бур | `drill/drill_anim.html` | пози, фази, промінь, іскри, тінь руки |
 | Жила | `crystal_vein/crystal_vein_anim.html` | кристалики, сяйво |
 | Жила + бур | `crystal_vein/crystal_vein_drill_scene.html` | місце бура, точка удару, постріл по кристалу |
+| Слизень | `enemies/slime/slime_crawl.html` | повзання, желе, моргання, тінь, натовп |
 
 Змінив у тюнері → «Скопіювати параметри» → оновити `*_rig.json` (і дефолти в HTML).

@@ -1,0 +1,73 @@
+{
+ "_note": "Значення = дефолти slime_crawl.html. Пікселі — у координатах slime.png. Анімація тільки кодом: position, scale, skew.",
+ "sprite": "slime.png",
+ "pivot": {
+  "x": 605,
+  "y": 718
+ },
+ "sprite_w": 1177,
+ "size_cells": 0.8,
+ "crawl": {
+  "period": 0.9,
+  "lunge": 0.4,
+  "stretch": 0.14,
+  "squash": 0.12,
+  "lean": 8.0,
+  "leanPhase": 0.2,
+  "jelly": 0.55,
+  "damp": 0.35,
+  "inch": 0.85,
+  "slide": 0.15
+ },
+ "shadow_ellipse": {
+  "shW": 0.95,
+  "shH": 0.3,
+  "shX": -0.08,
+  "shY": -0.07,
+  "shA": 0.38
+ },
+ "eyes": [
+  {
+   "x": 583,
+   "y": 386,
+   "rx": 80,
+   "ry": 66,
+   "over": [
+    1
+   ]
+  },
+  {
+   "x": 694,
+   "y": 482,
+   "rx": 82,
+   "ry": 73,
+   "over": []
+  },
+  {
+   "x": 883,
+   "y": 443,
+   "rx": 88,
+   "ry": 88,
+   "over": []
+  }
+ ],
+ "blink_order": [
+  0,
+  2,
+  1
+ ],
+ "blink_s": {
+  "bClose": 0.07,
+  "bHold": 0.05,
+  "bOpen": 0.11,
+  "bGap": 0.18,
+  "bPause": 2.2,
+  "bRand": 1.5
+ },
+ "lid": {
+  "top": "#a24cf2",
+  "bottom": "#6418b8",
+  "rim": "#2a0650",
+  "rim_px": 7.0
+ }
+}
