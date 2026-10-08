@@ -31,36 +31,37 @@
    308,
    608
   ],
-  "tip": [
-   100,
-   975
+  "lens": [
+   96,
+   932
   ],
-  "image": "drill_arm_3.png"
+  "image": "drill_arm_3.png",
+  "note": "laser emitter head; beam starts at lens + (tipX, tipY) in the head's frame"
  },
  "draw_order": [
   "drill_body_shadow",
   "arm_shadow",
   "drill_body",
+  "hot_spot",
   "drill_arm_3",
   "drill_arm_2",
-  "drill_arm_1"
+  "drill_arm_1",
+  "beam",
+  "lens_glow",
+  "sparks"
  ],
  "pose_up": {
-  "shoulder": 60,
-  "elbow": -27,
-  "wrist": 0
- },
- "pose_drill": {
-  "shoulder": -11,
-  "elbow": -4,
-  "wrist": 2
+  "shoulder": 80,
+  "elbow": -65,
+  "head": 9
  },
  "timing_s": {
-  "move": 0.4,
-  "drill": 2.5,
+  "move": 0.5,
+  "charge": 0.6,
+  "fire": 2.5,
+  "cool": 0.5,
   "wait": 1
  },
- "shake": 1.1,
  "body": {
   "image": "drill_body.png",
   "shadow": "drill_body_shadow.png",
@@ -74,16 +75,60 @@
   680
  ],
  "arm_shadow": {
-  "model": "per joint: ground row interpolated by arm length from shoulder_ground (f=0) to drill tip in drill pose (f=1); h = groundY - jointY; shadow = (x + tx*h, groundY + ty*h); each segment affine-mapped onto its joints' shadow points, thickness k",
-  "tx": -0.45,
+  "model": "per joint: ground row interpolated by arm length from shoulder_ground (f=0) to the lens in pose_fire (f=1); h = groundY - jointY; shadow = (x + tx*h, groundY + ty*h); each segment affine-mapped onto its joints' shadow points, thickness k",
+  "tx": -0.3,
   "ty": 0.2,
-  "k": 0.7,
-  "opacity": 0.45,
-  "blur_px": 4,
+  "k": 0.85,
+  "opacity": 0.35,
+  "blur_px": 2,
   "color": [
    3,
    11,
    26
   ]
+ },
+ "pose_fire": {
+  "shoulder": 31,
+  "elbow": -31,
+  "head": 2
+ },
+ "recoil": 0.5,
+ "laser": {
+  "tip_offset": [
+   5,
+   0
+  ],
+  "aim_deg": -9,
+  "ground_y_canvas": 1095,
+  "canvas_offset": [
+   140,
+   120
+  ],
+  "max_len": 1020,
+  "core_w": 12,
+  "glow_w": 60,
+  "glow_a": 0.58,
+  "flicker_a": 0.8,
+  "flicker_speed": 33,
+  "start_s": 0,
+  "lens_glow_r": 66,
+  "lens_glow_a": 1,
+  "hot_r": 83,
+  "hot_a": 0.58,
+  "hot_pulse": 0.17,
+  "color_beam": "#ff2a2a",
+  "color_core": "#fff1e6",
+  "color_hot": "#ff7a2a"
+ },
+ "sparks": {
+  "per_frame": 6,
+  "speed": 520,
+  "spread_deg": 162,
+  "dir_deg_from_up": 20,
+  "gravity": 720,
+  "life_s": 0.72,
+  "size": 4.3,
+  "tail": 0.026,
+  "color": "#ff5030"
  }
 }

@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Жила кристалів — літаючі кристалики</title>
+<!-- Відкривати з папки жили: картинки беруться поруч (crystal_vein*.png, crystal_shard_*.png). -->
+<style>
+  body { margin: 0; display: flex; height: 100vh; font: 13px system-ui, sans-serif; background: #1e2328; color: #ddd; }
+  #view { flex: 1; display: flex; align-items: center; justify-content: center; }
+  canvas { max-width: 100%; max-height: 100vh; cursor: grab; }
+  #panel { width: 310px; padding: 12px 14px; background: #262c33; overflow-y: auto; box-sizing: border-box; }
+  details { border-top: 1px solid #39424c; padding: 4px 0; }
+  summary { cursor: pointer; color: #8fd3ff; font-weight: 600; padding: 4px 0; }
+  label { display: block; margin: 6px 0 1px; }
+  label span { float: right; color: #ffd27a; }
+  input[type=range] { width: 100%; }
+  input[type=color] { width: 100%; height: 24px; border: 0; background: none; }
+  button { width: 100%; padding: 7px; margin-top: 6px; background: #3a4450; color: #fff; border: 1px solid #556; border-radius: 4px; cursor: pointer; }
+  textarea { width: 100%; height: 140px; margin-top: 8px; background: #161a1e; color: #cfe; border: 1px solid #445; font: 11px monospace; }
+  .hint { color: #999; font-size: 12px; }
+  #msg { color: #ffb070; font-size: 12px; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div id="view"><canvas id="c" width="1600" height="1200"></canvas></div>
+<div id="panel">
+  <div class="hint">Тягни кристалик мишкою — змінюєш його місце.</div>
+  <div style="display:flex;gap:6px"><button id="play">Пауза</button><button id="reset">Скинути все</button></div>
+  <div id="msg"></div>
+  <div id="controls"></div>
+  <details><summary>Перегляд</summary>
+    <label>Колір землі</label><input id="ground" type="color" value="#2a2230">
+    <label><input id="anchors" type="checkbox"> показати точки кріплення</label>
+  </details>
+  <button id="copy">Скопіювати параметри</button>
+  <textarea id="out" readonly></textarea>
+</div>
+<script>
+const SRC = { vein: "crystal_vein.png", veinShadow: "crystal_vein_shadow.png",
+              s1: "crystal_shard_1.png", s2: "crystal_shard_2.png", s3: "crystal_shard_3.png" };
+const VEIN_POS = { x: 0, y: 80 };   // where the 1536x1024 vein image sits on the canvas
+
+// [key, group, label, min, max, step, default]
+const SPEC = [["veinScale", "Моноліт", "Масштаб моноліту", 0.3, 1.5, 0.01, 1]];
+const SHARD_DEF = [
+  { x: 633, y: 330, amp: 26, period: 3.2, phase: 0, sway: 6, scale: 0.25, height: 260 },
+  { x: 1047, y: 281, amp: 20, period: 2.6, phase: 0.33, sway: 9, scale: 0.22, height: 220 },
+  { x: 611, y: 795, amp: 30, period: 3.8, phase: 0.66, sway: 4, scale: 0.22, height: 160 },
+];
+SHARD_DEF.forEach((d, i) => {
+  const g = `Кристалик ${i + 1}`, n = i + 1;
+  SPEC.push([`x${n}`, g, "Позиція X", 0, 1600, 1, d.x], [`y${n}`, g, "Позиція Y (центр польоту)", 0, 1200, 1, d.y],
+            [`h${n}`, g, "Висота над землею (для тіні), px", 0, 900, 1, d.height],
+            [`amp${n}`, g, "Амплітуда вгору-вниз, px", 0, 150, 1, d.amp], [`per${n}`, g, "Період, с", 0.5, 10, 0.1, d.period],
+            [`ph${n}`, g, "Зсув фази (0–1)", 0, 1, 0.01, d.phase], [`sway${n}`, g, "Хитання, °", 0, 45, 0.5, d.sway],
+            [`sc${n}`, g, "Масштаб", 0.05, 1.5, 0.01, d.scale], [`spin${n}`, g, "Обертання (стискання по X)", 0, 1, 0.01, 0]);
+});
+SPEC.push(
+  ["glowR", "Сяйво кристаликів", "Радіус", 0, 300, 1, 83], ["glowA", "Сяйво кристаликів", "Яскравість", 0, 1, 0.01, 0.55],
+  ["glowPulse", "Сяйво кристаликів", "Пульсація", 0, 1, 0.01, 0.51],
+  ["mGlowR", "Сяйво моноліту", "Радіус", 0, 700, 1, 432], ["mGlowA", "Сяйво моноліту", "Яскравість", 0, 1, 0.01, 0.18],
+  ["mGlowY", "Сяйво моноліту", "Центр Y", 0, 1200, 1, 549], ["mGlowX", "Сяйво моноліту", "Центр X", 0, 1600, 1, 832],
+  ["mPulseS", "Сяйво моноліту", "Швидкість пульсу", 0, 5, 0.05, 0.6],
+  ["shA", "Тінь кристаликів", "Прозорість", 0, 1, 0.01, 0.28], ["shR", "Тінь кристаликів", "Розмір", 5, 200, 1, 48],
+  ["shDx", "Тінь кристаликів", "Зсув вліво на 1 px висоти", -1.5, 0.5, 0.01, -0.3],
+  ["shShrink", "Тінь кристаликів", "Як сильно тінь меншає з висотою", 0, 1, 0.01, 0.45],
+);
+const COLORS = [["cGlow", "Сяйво кристаликів", "Колір", "#4fb6ff"], ["cMGlow", "Сяйво моноліту", "Колір", "#3d8cff"]];
+const P = {};
+for (const s of SPEC) P[s[0]] = s[6];
+for (const c of COLORS) P[c[0]] = c[3];
+const DEFAULTS = { ...P };
+
+const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+const img = {}; let loaded = 0; const NIMG = Object.keys(SRC).length;
+for (const k in SRC) {
+  img[k] = new Image();
+  img[k].onload = () => { if (++loaded === NIMG) start(); };
+  img[k].onerror = () => { document.getElementById("msg").textContent = "Не знайдено " + SRC[k] + " — відкрий сторінку з папки жили."; };
+  img[k].src = SRC[k];
+}
+const rad = d => d * Math.PI / 180;
+const hexRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)).join(",");
+function glow(x, y, r, rgb, a) {
+  if (r <= 0 || a <= 0) return;
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(1, `rgba(${rgb},0)`);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+}
+
+let playing = true, t0 = performance.now(), tPaused = 0;
+function shardState(n, t) {
+  const per = P["per" + n], ph = P["ph" + n];
+  const s = Math.sin((t / per + ph) * Math.PI * 2);
+  return { x: P["x" + n], y: P["y" + n] - s * P["amp" + n], lift: s,
+           rot: rad(P["sway" + n]) * Math.sin((t / (per * 1.7) + ph) * Math.PI * 2),
+           sx: 1 - P["spin" + n] * (0.5 - 0.5 * Math.cos((t / (per * 1.3) + ph) * Math.PI * 2)) };
+}
+
+function frame(now) {
+  const t = playing ? (now - t0) / 1000 : tPaused;
+  ctx.fillStyle = document.getElementById("ground").value; ctx.fillRect(0, 0, cv.width, cv.height);
+  const vs = P.veinScale, vw = img.vein.width * vs, vh = img.vein.height * vs;
+  const vx = cv.width / 2 - vw / 2 + VEIN_POS.x * vs, vy = VEIN_POS.y + (img.vein.height - vh);
+  ctx.drawImage(img.veinShadow, vx, vy, vw, vh);
+
+  // shard shadows on the ground
+  for (let n = 1; n <= 3; n++) {
+    const st = shardState(n, t), h = P["h" + n] + st.lift * P["amp" + n];
+    const k = Math.max(0.15, 1 - P.shShrink * h / 900);
+    const gx = st.x + P.shDx * h, gy = st.y + h;
+    ctx.fillStyle = `rgba(3,11,26,${P.shA * k})`;
+    ctx.beginPath(); ctx.ellipse(gx, gy, P.shR * k * P["sc" + n] / 0.3, P.shR * 0.35 * k * P["sc" + n] / 0.3, 0, 0, 7); ctx.fill();
+  }
+  ctx.drawImage(img.vein, vx, vy, vw, vh);
+  ctx.save(); ctx.globalCompositeOperation = "lighter";
+  glow(P.mGlowX, P.mGlowY, P.mGlowR, hexRgb(P.cMGlow), P.mGlowA * (0.75 + 0.25 * Math.sin(t * P.mPulseS * Math.PI * 2)));
+  ctx.restore();
+
+  for (let n = 1; n <= 3; n++) {
+    const st = shardState(n, t), im = img["s" + n], sc = P["sc" + n];
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    glow(st.x, st.y, P.glowR * sc / 0.3, hexRgb(P.cGlow), P.glowA * (1 - P.glowPulse * 0.5 + P.glowPulse * 0.5 * st.lift));
+    ctx.restore();
+    ctx.save(); ctx.translate(st.x, st.y); ctx.rotate(st.rot); ctx.scale(sc * st.sx, sc);
+    ctx.drawImage(im, -im.width / 2, -im.height / 2); ctx.restore();
+    if (document.getElementById("anchors").checked) {
+      ctx.strokeStyle = "#ff0"; ctx.beginPath(); ctx.arc(P["x" + n], P["y" + n], 10, 0, 7); ctx.stroke();
+      ctx.fillStyle = "#ff0"; ctx.fillText(String(n), P["x" + n] + 12, P["y" + n] - 12);
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+function buildUI() {
+  const root = document.getElementById("controls"); const groups = {};
+  const group = name => {
+    if (!groups[name]) { const d = document.createElement("details"); d.open = name.startsWith("Кристалик 1");
+      const s = document.createElement("summary"); s.textContent = name; d.appendChild(s); root.appendChild(d); groups[name] = d; }
+    return groups[name];
+  };
+  for (const [k, g, label, min, max, step] of SPEC) {
+    const L = document.createElement("label"); L.innerHTML = `${label} <span id="v_${k}"></span>`;
+    const I = document.createElement("input"); I.type = "range"; I.min = min; I.max = max; I.step = step; I.id = k; I.value = P[k];
+    const dec = step >= 1 ? 0 : step >= 0.1 ? 1 : 2;
+    I.addEventListener("input", e => { P[k] = +e.target.value; refresh(); });
+    group(g).appendChild(L); group(g).appendChild(I); I._dec = dec;
+  }
+  for (const [k, g, label] of COLORS) {
+    const L = document.createElement("label"); L.textContent = label;
+    const I = document.createElement("input"); I.type = "color"; I.id = k; I.value = P[k];
+    I.addEventListener("input", e => { P[k] = e.target.value; refresh(); });
+    group(g).appendChild(L); group(g).appendChild(I);
+  }
+  refresh();
+}
+function refresh() {
+  for (const [k, , , , , step] of SPEC) {
+    const el = document.getElementById(k); el.value = P[k];
+    document.getElementById("v_" + k).textContent = (+P[k]).toFixed(step >= 1 ? 0 : step >= 0.1 ? 1 : 2);
+  }
+  for (const [k] of COLORS) document.getElementById(k).value = P[k];
+  document.getElementById("out").value = JSON.stringify(P, null, 1);
+}
+
+function start() {
+  buildUI();
+  document.getElementById("play").onclick = e => {
+    playing = !playing;
+    if (!playing) tPaused = (performance.now() - t0) / 1000; else t0 = performance.now() - tPaused * 1000;
+    e.target.textContent = playing ? "Пауза" : "Грати";
+  };
+  document.getElementById("reset").onclick = () => { Object.assign(P, DEFAULTS); refresh(); };
+  document.getElementById("copy").onclick = () => {
+    const t = document.getElementById("out"); t.select(); navigator.clipboard?.writeText(t.value); document.execCommand("copy");
+  };
+  // drag a shard: grab the nearest one within 120 px
+  let drag = null;
+  const toCanvas = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height }; };
+  cv.addEventListener("mousedown", e => {
+    const m = toCanvas(e), t = playing ? (performance.now() - t0) / 1000 : tPaused; let best = null;
+    for (let n = 1; n <= 3; n++) { const s = shardState(n, t), d = Math.hypot(s.x - m.x, s.y - m.y); if (d < 120 && (!best || d < best.d)) best = { n, d }; }
+    if (best) drag = { n: best.n, m, x: P["x" + best.n], y: P["y" + best.n] };
+  });
+  window.addEventListener("mousemove", e => {
+    if (!drag) return; const m = toCanvas(e);
+    P["x" + drag.n] = Math.round(drag.x + m.x - drag.m.x); P["y" + drag.n] = Math.round(drag.y + m.y - drag.m.y); refresh();
+  });
+  window.addEventListener("mouseup", () => { drag = null; });
+  requestAnimationFrame(frame);
+}
+</script>
+</body>
+</html>
