@@ -1,0 +1,180 @@
+{
+ "note": "All coords in crystal_vein.png pixel space (1536x1024, origin top-left) at scale 1 unless said otherwise. Tuned in crystal_vein_anim.html / crystal_vein_drill_scene.html (2026-10-08).",
+ "images": {
+  "vein": "crystal_vein.png",
+  "shadow": "crystal_vein_shadow.png",
+  "combined": "crystal_vein_with_shadow.png",
+  "shards": [
+   "crystal_shard_1.png",
+   "crystal_shard_2.png",
+   "crystal_shard_3.png"
+  ]
+ },
+ "base_y": 980,
+ "monolith_glow": {
+  "center": [
+   800,
+   469
+  ],
+  "radius": 432,
+  "alpha": 0.18,
+  "pulse_hz": 0.6,
+  "color": "#3d8cff",
+  "blend": "add",
+  "pulse": "alpha * (0.75 + 0.25*sin(t*hz*2pi))"
+ },
+ "shards": [
+  {
+   "image": "crystal_shard_1.png",
+   "center": [
+    601,
+    250
+   ],
+   "bob_amp": 26,
+   "period_s": 3.2,
+   "phase": 0,
+   "sway_deg": 6,
+   "scale": 0.25,
+   "spin": 0,
+   "height_for_shadow": 260
+  },
+  {
+   "image": "crystal_shard_2.png",
+   "center": [
+    1015,
+    201
+   ],
+   "bob_amp": 20,
+   "period_s": 2.6,
+   "phase": 0.33,
+   "sway_deg": 9,
+   "scale": 0.22,
+   "spin": 0,
+   "height_for_shadow": 220
+  },
+  {
+   "image": "crystal_shard_3.png",
+   "center": [
+    579,
+    715
+   ],
+   "bob_amp": 30,
+   "period_s": 3.8,
+   "phase": 0.66,
+   "sway_deg": 4,
+   "scale": 0.22,
+   "spin": 0,
+   "height_for_shadow": 160
+  }
+ ],
+ "shard_motion": "s = sin((t/period + phase)*2pi); y = center.y - s*bob_amp; rotation = sway*sin((t/(period*1.7)+phase)*2pi); scale.x *= 1 - spin*(0.5-0.5*cos((t/(period*1.3)+phase)*2pi))",
+ "shard_glow": {
+  "radius_at_scale_0.3": 83,
+  "alpha": 0.55,
+  "pulse": 0.51,
+  "color": "#4fb6ff",
+  "blend": "add",
+  "formula": "alpha*(1 - pulse*0.5 + pulse*0.5*s)"
+ },
+ "shard_shadow": {
+  "alpha": 0.28,
+  "radius_at_scale_0.3": 48,
+  "dx_per_px_height": -0.3,
+  "shrink": 0.45,
+  "color": [
+   3,
+   11,
+   26
+  ],
+  "formula": "h = height + s*bob_amp; k = max(0.15, 1 - shrink*h/900); ellipse at (x + dx*h, y + h), rx = r*k, ry = 0.35*r*k, alpha*k"
+ },
+ "drill_slot": {
+  "note": "one drill per vein; drill sprite space -> vein space: p_vein = offset + p_drill*scale",
+  "offset": [
+   880,
+   160
+  ],
+  "scale": 0.5,
+  "hit_point": [
+   892,
+   580
+  ],
+  "auto_aim": true,
+  "pose_up": {
+   "shoulder": 80,
+   "elbow": -65,
+   "head": 9
+  },
+  "pose_fire": {
+   "shoulder": 53,
+   "elbow": -67,
+   "head_offset": 1,
+   "note": "head angle = auto-aim to hit_point + head_offset"
+  },
+  "timing_s": {
+   "move": 0.5,
+   "charge": 0.6,
+   "fire": 2.5,
+   "cool": 0.5,
+   "wait": 1
+  },
+  "recoil": 0.5
+ },
+ "laser_in_scene": {
+  "note": "beam/lens widths and radii are in drill sprite px (multiplied by drill scale); hot spot and sparks are in vein px",
+  "tip_offset": [
+   0,
+   -7
+  ],
+  "core_w": 12.5,
+  "glow_w": 78,
+  "glow_a": 0.55,
+  "flicker_a": 0.54,
+  "flicker_speed": 29,
+  "start_s": 0,
+  "lens_glow_r": 66,
+  "lens_glow_a": 1,
+  "hot_r": 120,
+  "hot_a": 0.72,
+  "hot_pulse": 0.14,
+  "crystal_heat": 0.49,
+  "colors": {
+   "beam": "#ff2a2a",
+   "core": "#fff1e6",
+   "hot": "#ff7a2a",
+   "spark": "#ff5030"
+  },
+  "sparks": {
+   "per_frame": 6,
+   "speed": 660,
+   "spread_deg": 171,
+   "dir_deg_from_up": 6,
+   "gravity": 1020,
+   "life_s": 0.72,
+   "size": 4.8,
+   "tail": 0.042
+  },
+  "arm_shadow": {
+   "tx": -0.3,
+   "ty": 0.2,
+   "k": 0.85,
+   "opacity": 0.35,
+   "blur_px": 2
+  }
+ },
+ "draw_order": [
+  "vein_shadow",
+  "drill_body_shadow",
+  "arm_shadow",
+  "Y-sort: drill vs vein by base line",
+  "shard_shadows",
+  "vein",
+  "monolith_glow",
+  "shard_glow",
+  "shards",
+  "hot_spot",
+  "beam",
+  "lens_glow",
+  "sparks"
+ ]
+}
