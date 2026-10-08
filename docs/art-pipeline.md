@@ -22,6 +22,8 @@ art/
       grenade_launcher/        гранатомет: основа + 8 ракурсів голови, частини ствола
     resources/
       crystal_vein/            жила: моноліт, 3 літаючі кристалики, rig, тюнери
+    enemies/
+      slime/                   слизень: один ракурс, повзання й моргання кодом, slime_rig.json
   maps/
     props/                     декор і перешкоди для редактора карти (prop_*.png, props.json)
     map_NN/
@@ -42,6 +44,7 @@ art/
 `core_shadow_cast.png` + `core_shadow_contact.png`), `drill/drill_anim.html` (пози руки, фази заряд/постріл/охолодження, промінь, іскри, тінь руки;
 режими «заморозити» і таймлайн), `machine_gun/machine_gun_scene.html` (обидві пушки: стрільба по цілі,
 ракурси, віддача, трасери, балістика гранатомета; бере частини гранатомета з `../grenade_launcher/`),
+`enemies/slime/slime_crawl.html` (повзання, моргання, натовп до 400 на землі map_03),
 `art/maps/map_03/map_03_editor.html` (карта).
 
 | Папка | Що там | У git |
