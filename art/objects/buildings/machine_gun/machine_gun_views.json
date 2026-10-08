@@ -1,0 +1,90 @@
+{
+ "0": {
+  "image": "machine_gun_head_000.png",
+  "housing": [
+   120,
+   189
+  ],
+  "muzzle": [
+   361,
+   194
+  ]
+ },
+ "45": {
+  "image": "machine_gun_head_045.png",
+  "housing": [
+   110,
+   142
+  ],
+  "muzzle": [
+   338,
+   263
+  ]
+ },
+ "90": {
+  "image": "machine_gun_head_090.png",
+  "housing": [
+   212,
+   137
+  ],
+  "muzzle": [
+   207,
+   316
+  ]
+ },
+ "135": {
+  "image": "machine_gun_head_135.png",
+  "housing": [
+   309,
+   143
+  ],
+  "muzzle": [
+   80,
+   263
+  ]
+ },
+ "180": {
+  "image": "machine_gun_head_180.png",
+  "housing": [
+   297,
+   189
+  ],
+  "muzzle": [
+   56,
+   195
+  ]
+ },
+ "225": {
+  "image": "machine_gun_head_225.png",
+  "housing": [
+   294,
+   245
+  ],
+  "muzzle": [
+   86,
+   142
+  ]
+ },
+ "270": {
+  "image": "machine_gun_head_270.png",
+  "housing": [
+   206,
+   244
+  ],
+  "muzzle": [
+   212,
+   101
+  ]
+ },
+ "315": {
+  "image": "machine_gun_head_315.png",
+  "housing": [
+   128,
+   249
+  ],
+  "muzzle": [
+   335,
+   145
+  ]
+ }
+}

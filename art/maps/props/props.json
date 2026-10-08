@@ -1,0 +1,308 @@
+[
+ {
+  "name": "rock_s1",
+  "file": "prop_rock_s1.png",
+  "foot": [
+   1,
+   1
+  ],
+  "ground": [
+   120,
+   122
+  ],
+  "body_w": 136,
+  "size": [
+   189,
+   134
+  ]
+ },
+ {
+  "name": "rock_s2",
+  "file": "prop_rock_s2.png",
+  "foot": [
+   1,
+   1
+  ],
+  "ground": [
+   130,
+   137
+  ],
+  "body_w": 155,
+  "size": [
+   210,
+   151
+  ]
+ },
+ {
+  "name": "rock_s3",
+  "file": "prop_rock_s3.png",
+  "foot": [
+   1,
+   1
+  ],
+  "ground": [
+   122,
+   122
+  ],
+  "body_w": 161,
+  "size": [
+   206,
+   134
+  ]
+ },
+ {
+  "name": "rock_m1",
+  "file": "prop_rock_m1.png",
+  "foot": [
+   2,
+   2
+  ],
+  "ground": [
+   186,
+   231
+  ],
+  "body_w": 279,
+  "size": [
+   327,
+   253
+  ]
+ },
+ {
+  "name": "rock_m2",
+  "file": "prop_rock_m2.png",
+  "foot": [
+   2,
+   2
+  ],
+  "ground": [
+   200,
+   218
+  ],
+  "body_w": 322,
+  "size": [
+   363,
+   238
+  ]
+ },
+ {
+  "name": "rock_m3",
+  "file": "prop_rock_m3.png",
+  "foot": [
+   2,
+   2
+  ],
+  "ground": [
+   192,
+   231
+  ],
+  "body_w": 306,
+  "size": [
+   346,
+   253
+  ]
+ },
+ {
+  "name": "rock_spire",
+  "file": "prop_rock_spire.png",
+  "foot": [
+   1,
+   1
+  ],
+  "ground": [
+   159,
+   316
+  ],
+  "body_w": 196,
+  "size": [
+   258,
+   344
+  ]
+ },
+ {
+  "name": "rock_mesa",
+  "file": "prop_rock_mesa.png",
+  "foot": [
+   2,
+   2
+  ],
+  "ground": [
+   210,
+   307
+  ],
+  "body_w": 413,
+  "size": [
+   417,
+   336
+  ]
+ },
+ {
+  "name": "rock_pit",
+  "file": "prop_rock_pit.png",
+  "foot": [
+   2,
+   2
+  ],
+  "ground": [
+   188,
+   284
+  ],
+  "body_w": 373,
+  "size": [
+   376,
+   312
+  ]
+ },
+ {
+  "name": "tree_tall",
+  "file": "prop_tree_tall.png",
+  "foot": [
+   1,
+   1
+  ],
+  "ground": [
+   204,
+   361
+  ],
+  "body_w": 239,
+  "size": [
+   328,
+   396
+  ]
+ },
+ {
+  "name": "tree_mid",
+  "file": "prop_tree_mid.png",
+  "foot": [
+   1,
+   1
+  ],
+  "ground": [
+   160,
+   264
+  ],
+  "body_w": 188,
+  "size": [
+   260,
+   290
+  ]
+ },
+ {
+  "name": "tree_small",
+  "file": "prop_tree_small.png",
+  "foot": [
+   1,
+   1
+  ],
+  "ground": [
+   128,
+   183
+  ],
+  "body_w": 137,
+  "size": [
+   202,
+   202
+  ]
+ },
+ {
+  "name": "trees_3",
+  "file": "prop_trees_3.png",
+  "foot": [
+   2,
+   2
+  ],
+  "ground": [
+   209,
+   321
+  ],
+  "body_w": 326,
+  "size": [
+   376,
+   351
+  ]
+ },
+ {
+  "name": "trees_5",
+  "file": "prop_trees_5.png",
+  "foot": [
+   2,
+   2
+  ],
+  "ground": [
+   220,
+   340
+  ],
+  "body_w": 328,
+  "size": [
+   384,
+   369
+  ]
+ },
+ {
+  "name": "tree_dead",
+  "file": "prop_tree_dead.png",
+  "foot": [
+   1,
+   1
+  ],
+  "ground": [
+   156,
+   334
+  ],
+  "body_w": 210,
+  "size": [
+   268,
+   365
+  ]
+ },
+ {
+  "name": "bush_round",
+  "file": "prop_bush_round.png",
+  "foot": [
+   1,
+   1
+  ],
+  "ground": [
+   188,
+   190
+  ],
+  "body_w": 253,
+  "size": [
+   319,
+   212
+  ]
+ },
+ {
+  "name": "bush_wide",
+  "file": "prop_bush_wide.png",
+  "foot": [
+   1,
+   1
+  ],
+  "ground": [
+   168,
+   166
+  ],
+  "body_w": 274,
+  "size": [
+   308,
+   182
+  ]
+ },
+ {
+  "name": "stump",
+  "file": "prop_stump.png",
+  "foot": [
+   1,
+   1
+  ],
+  "ground": [
+   138,
+   172
+  ],
+  "body_w": 265,
+  "size": [
+   272,
+   188
+  ]
+ }
+]
