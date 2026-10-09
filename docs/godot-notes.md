@@ -218,6 +218,35 @@ Map03 (GameMap)     layout = map_03_layout.png, grid (MapGrid, збережен�
   ж формулами, що `Turret.update_sprites()`; у решти — знімок її власних `Sprite2D` (без тіней) у
   поточній позі; вписує непрозорі пікселі. Іконки — `StatIcon`, кодом.
   Гранатомет — 4-та плитка «Вибух» (`blast` / ширина клітинки), картка розширюється на одну плитку.
+  Квадрат підсвітки — `MapObject.footprint_rect()`: клітинки об'єкта; у бура в слоті — `Drill.slot_rect()`,
+  2×2 навколо того місця, де бур намальований (його точка на землі на `map_shift` (0, 1) клітинки нижче
+  центру квадрата), бо жила ставить бур за артом, а не точно на клітинки слота.
+
+## Будівництво — `game/ui/build_menu.gd` (вузол `Main/BuildMenu`)
+
+- **Що можна будувати:** `game/core/build_catalog.tres` (`BuildCatalog.items` → `BuildItem`: `title`,
+  `scene`, `cost`, `vein_slot_only`). Порядок = порядок карток.
+- **Правила — `Builder`** (`game/core/builder.gd`, статичні): `problem(map, item, o, wallet)` → "" або
+  чому ні: бур — тільки у вільний слот жили (`free_slots`), решта — на вільні придатні клітинки
+  (`GameMap.placement_problem`) і не на слот бура, далі гроші. `build()` перевіряє, бере ціну, додає в
+  `World`. `make(item, cell, ghost)` — нова будівля поза деревом; примарка (`MapObject.ghost`) не входить
+  у `GameMap.objects()`, не займає клітинок, не вступає в групи й не працює (`PROCESS_MODE_DISABLED`;
+  турель один раз ставить спрайти в `_ready`).
+- **Меню** (усе створюється кодом): кругла кнопка `Toggle` справа знизу (`art/ui/build/build_button.png`,
+  відкрите — `build_button_close.png`), над нею ліворуч — `Cards` (картки `Button`: `ObjectPortrait.show_scene()`
+  — турель з rig, стіна/ретранслятор — блок, бур — знімок спрайтів свіжого екземпляра; назва, ціна,
+  червона, коли не вистачає). Активна картка піднята на 18 px і золота. `Confirm` (✔ ✖) іде за правим
+  верхнім кутом квадрата примарки. Тап по карті (рух < 14 px) — `place_at()`; поки режим відкритий,
+  `ObjectInfo` тапи не бере (`BuildMenu.open_in()`).
+- **На землі — `BuildOverlay`** у `Map03/Shadows`: поки режим відкритий — сітка на видиму частину карти
+  (лінії тільки там, де екран) і червоні клітинки `Builder.blocked_cells(map, item)` — одна текстура
+  1 px на клітинку, розтягнута на карту (nearest), перераховується при виборі картки, після ✔ і на
+  `map_changed`; квадрат примарки (зелений / червоний) і бліда сітка
+  довкола; з буром — пунктирні квадрати вільних слотів (`Drill.slot_rect`). Тап по слоту — `Builder.slot_at`.
+- **Стіна, ретранслятор — `BlockBuilding`** (`game/objects/block/`, сцени `wall/`, `relay/`, числа —
+  `*_rig.tres` типу `BlockRig`): блок кодом над footprint (`draw_block`), `hp` / `damage()`, при 0 —
+  `queue_free`. `path_cost` стіни 60 (FlowField: клітинка коштує 1 + 60). Ретранслятор `store = true` —
+  група `storage`, 2 `DronePad`.
 
 ## Меню — `game/ui/main_menu.tscn`
 

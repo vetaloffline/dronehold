@@ -112,7 +112,27 @@ func find_vein(c: Vector2i) -> CrystalVein:
 
 
 func _slot_point(v: CrystalVein) -> Vector2:
-	return v.vein_px_to_parent(v.drill_px_to_vein(rig.ground_point))
+	return slot_ground_point(v, rig)
+
+
+## Where a drill with rig `r` stands in the slot of `v` (its ground point, the vein's parent space).
+static func slot_ground_point(v: CrystalVein, r: DrillRig) -> Vector2:
+	return v.vein_px_to_parent(v.drill_px_to_vein(r.ground_point))
+
+
+## The 2×2-cell square under a drill with rig `r` in the slot of `v`, where the drill is drawn (the
+## vein places it by its art, not exactly on the slot cells): its ground point is r.map_shift cells
+## off the square's centre, as on the plain grid (MapObject.ground_point_for).
+static func slot_rect(v: CrystalVein, r: DrillRig) -> Rect2:
+	var size := Vector2(2, 2) * MapGrid.CELL
+	var centre := slot_ground_point(v, r) - r.map_shift * MapGrid.CELL
+	return Rect2(centre - size * 0.5, size)
+
+
+func footprint_rect() -> Rect2:
+	if vein and rig:
+		return slot_rect(vein, rig)
+	return super()
 
 
 func ground_point_for(c: Vector2i) -> Vector2:

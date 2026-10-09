@@ -44,7 +44,7 @@ func _draw() -> void:
 			draw_arc(c, rad, deg_to_rad(a + _t * 4.0), deg_to_rad(a + _t * 4.0 + DASH_DEG), 6, Color(color, (0.75 + 0.2 * pulse) * open), 4.0 * px, true)
 			a += DASH_DEG + GAP_DEG
 	# The building's cells: a square on exactly the cells it takes (2×2 for a turret / drill).
-	var cells := Rect2(Vector2(target.cell) * MapGrid.CELL, Vector2(target.get_footprint()) * MapGrid.CELL)
+	var cells := target.footprint_rect()
 	draw_rect(cells, Color(color, 0.18 * open))
 	draw_rect(cells.grow(-3.0 * px), Color(color, 0.25 * open), false, 6.0 * px)
 	draw_rect(cells, Color(color, (0.85 + 0.15 * pulse) * open), false, 3.0 * px)

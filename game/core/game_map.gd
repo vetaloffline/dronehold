@@ -114,7 +114,7 @@ func objects() -> Array[MapObject]:
 	var w := world()
 	if w:
 		for n in w.get_children():
-			if n is MapObject:
+			if n is MapObject and not (n as MapObject).ghost:
 				out.append(n)
 	var sp := get_node_or_null("Spawns")
 	if sp:

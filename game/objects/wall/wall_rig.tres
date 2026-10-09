@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="BlockRig" format=3]
+
+[ext_resource type="Script" path="res://game/objects/block/block_rig.gd" id="1_rig"]
+
+[resource]
+script = ExtResource("1_rig")
+footprint = Vector2i(2, 2)
+height = 26.0
+top_color = Color(0.62, 0.64, 0.68, 1)
+side_color = Color(0.38, 0.4, 0.45, 1)
+edge_color = Color(0.16, 0.17, 0.2, 1)
+max_hp = 300.0
+path_cost = 60.0
+clear_radius = 0.0
+store = false

@@ -164,6 +164,198 @@ func _test_drones(map: GameMap) -> void:
 	drill.process_mode = Node.PROCESS_MODE_INHERIT
 
 
+## First cell near the core where `item` can be built (ignoring the money), else (-1, -1).
+func _free_cell(map: GameMap, item: BuildItem) -> Vector2i:
+	for ring in range(4, 30):
+		for dy in range(-ring, ring + 1):
+			for dx in range(-ring, ring + 1):
+				if maxi(absi(dx), absi(dy)) != ring:
+					continue
+				var o := Builder.make(item, _core.cell + Vector2i(dx, dy))
+				var ok := Builder.problem(map, item, o, null) == ""
+				var c := o.cell
+				o.free()
+				if ok:
+					return c
+	return Vector2i(-1, -1)
+
+
+func _item(cat: BuildCatalog, title: String) -> BuildItem:
+	for it in cat.items:
+		if it.title == title:
+			return it
+	return null
+
+
+func _test_builder(map: GameMap) -> void:
+	var cat := load("res://game/core/build_catalog.tres") as BuildCatalog
+	var names := []
+	for it in cat.items:
+		names.append("%s %d" % [it.title, it.cost.get("crystal", 0)])
+	check(names == ["Бур 100", "Кулемет 50", "Гранатомет 120", "Стіна 10", "Ретранслятор 80"], "build menu: 5 items with prices (%s)" % [names])
+	var drill_i := _item(cat, "Бур")
+	var mg_i := _item(cat, "Кулемет")
+	var wall_i := _item(cat, "Стіна")
+	var relay_i := _item(cat, "Ретранслятор")
+	var w := Wallet.of(_main)
+	w.add("crystal", 1000 - w.amount("crystal"))
+	var slots := Builder.free_slots(map)
+	var slot_veins := []
+	for v in slots:
+		slot_veins.append(v.drill_slot_cell())
+	check(not slot_veins.has(_drill.cell) and slots.size() >= 1, "free drill slots: the vein with a drill is not one (%d free)" % slots.size())
+	if slots.is_empty():
+		return
+	var v := slots[0]
+	# Drill: only into a free vein slot.
+	var off := Builder.make(drill_i, v.drill_slot_cell() + Vector2i(4, 4))
+	check(Builder.problem(map, drill_i, off, w) == Builder.NOT_A_SLOT, "drill off a slot: «%s»" % Builder.NOT_A_SLOT)
+	off.free()
+	var tap := Drill.slot_rect(v, _drill.rig).get_center()
+	check(Builder.slot_at(map, tap, _drill.rig) == v, "a tap inside the highlighted slot finds its vein")
+	var built: Array[MapObject] = []
+	var d := Builder.build(map, drill_i, v.drill_slot_cell(), w) as Drill
+	check(d != null and d.vein == v and w.amount("crystal") == 900, "drill built in the slot, −100 (wallet %d)" % w.amount("crystal"))
+	if d:
+		built.append(d)
+		check(map.objects().has(d) and not Builder.free_slots(map).has(v), "the built drill is on the map, its slot is no longer free")
+		var why := []
+		check(Builder.build(map, drill_i, v.drill_slot_cell(), w, why) == null and why == [Builder.NOT_A_SLOT] and w.amount("crystal") == 900, "a second drill into the same slot: refused, nothing taken")
+	# Turrets: free buildable cells, not the core, not a drill slot, not rock.
+	var on_core := Builder.make(mg_i, _core.cell + Vector2i(2, 2))
+	check(Builder.problem(map, mg_i, on_core, w).contains("зайнято"), "machine gun on the core: «%s»" % Builder.problem(map, mg_i, on_core, w))
+	on_core.free()
+	if Builder.free_slots(map).size() > 0:
+		var keep := Builder.make(mg_i, Builder.free_slots(map)[0].drill_slot_cell())
+		check(Builder.problem(map, mg_i, keep, w) == Builder.SLOT_KEPT, "machine gun on a drill slot: «%s»" % Builder.SLOT_KEPT)
+		keep.free()
+	var rock := Vector2i(-1, -1)
+	for r in map.grid.rows - 1:
+		for c in map.grid.cols - 1:
+			if rock.x < 0 and map.grid.kind(c, r) == MapGrid.Kind.ROCK and map.grid.kind(c + 1, r) == MapGrid.Kind.ROCK and map.grid.kind(c, r + 1) == MapGrid.Kind.ROCK and map.grid.kind(c + 1, r + 1) == MapGrid.Kind.ROCK:
+				rock = Vector2i(c, r)
+	var on_rock := Builder.make(mg_i, rock)
+	check(rock.x >= 0 and Builder.problem(map, mg_i, on_rock, w).contains("не будують"), "machine gun on a cliff: «%s»" % Builder.problem(map, mg_i, on_rock, w))
+	on_rock.free()
+	var cell := _free_cell(map, mg_i)
+	check(cell.x >= 0, "there is free ground near the core (%s)" % cell)
+	# A ghost is drawn but is not a part of the map: it blocks nothing and does not run.
+	var g := Builder.make(mg_i, cell, true)
+	map.world().add_child(g)
+	check(not map.objects().has(g) and g.process_mode == Node.PROCESS_MODE_DISABLED, "ghost: not on the map's object list, not running")
+	var probe := Builder.make(mg_i, cell)
+	check(Builder.problem(map, mg_i, probe, w) == "", "the ghost does not block its own cells")
+	probe.free()
+	g.free()
+	w.add("crystal", 30 - w.amount("crystal"))
+	var why := []
+	check(Builder.build(map, mg_i, cell, w, why) == null and why == [Builder.NO_MONEY] and w.amount("crystal") == 30, "30 crystals, machine gun 50: «%s», nothing taken" % Builder.NO_MONEY)
+	w.add("crystal", 1000 - w.amount("crystal"))
+	var t := Builder.build(map, mg_i, cell, w)
+	check(t is Turret and w.amount("crystal") == 950 and map.objects().has(t), "machine gun built on free ground, −50")
+	if t:
+		built.append(t)
+	# Wall: 300 hp, slimes walk round it (path cost 60 per cell); 0 hp → gone.
+	var wc := _free_cell(map, wall_i)
+	var wall := Builder.build(map, wall_i, wc, w) as BlockBuilding
+	check(wall != null and is_equal_approx(wall.hp, 300.0) and w.amount("crystal") == 940, "wall built, 300 hp, −10")
+	if wall:
+		var costs := map.building_costs()
+		var k := wall.cell.y * map.grid.cols + wall.cell.x
+		check(costs.has(k) and is_equal_approx(float(costs[k]), 60.0), "wall cells cost slimes 60 extra (got %s)" % [costs.get(k)])
+		check(not wall.damage(100.0) and is_equal_approx(wall.hp, 200.0), "wall takes 100 → 200 hp")
+		check(wall.damage(500.0) and wall.is_queued_for_deletion(), "0 hp → the wall goes")
+	# Relay: a store for the drones (the ghost is not).
+	var rg := Builder.make(relay_i, cell, true)
+	map.world().add_child(rg)
+	check(not rg.is_in_group("storage"), "ghost relay is not a store")
+	rg.free()
+	var rc := _free_cell(map, relay_i)
+	var relay := Builder.build(map, relay_i, rc, w)
+	check(relay != null and relay.is_in_group("storage") and relay.drone_pads().size() == 2, "relay built: a store with 2 drone pads")
+	if relay:
+		built.append(relay)
+	for o in built:
+		o.free()
+	w.add("crystal", 200 - w.amount("crystal"))
+
+
+func _test_build_menu(map: GameMap) -> void:
+	var bm := _main.get_node("BuildMenu") as BuildMenu
+	var info := _main.get_node("ObjectInfo") as ObjectInfo
+	var w := Wallet.of(_main)
+	w.add("crystal", 500 - w.amount("crystal"))
+	var toggle := bm.get_node("Root/Toggle") as TextureButton
+	check(toggle.visible and not bm.is_open and not (bm.get_node("Root/Cards") as Control).visible, "build button on screen, menu closed")
+	toggle.pressed.emit()
+	check(bm.is_open and (bm.get_node("Root/Cards") as Control).visible and toggle.texture_normal == BuildMenu.CLOSE_TEX, "build button opens the cards and turns into ✕")
+	# The whole map: a grid and red cells where nothing can be built.
+	var ov0 := map.get_node("Shadows/BuildOverlay") as BuildOverlay
+	var rock := Vector2i(-1, -1)
+	for r in map.grid.rows:
+		for c in map.grid.cols:
+			if rock.x < 0 and not map.grid.can_build(c, r):
+				rock = Vector2i(c, r)
+	var core_c := _core.cell + Vector2i(3, 3)
+	var free0 := _free_cell(map, _item(bm.catalog, "Кулемет"))
+	check(ov0.show_map and ov0.blocked_shown(rock.x, rock.y) and ov0.blocked_shown(core_c.x, core_c.y) and not ov0.blocked_shown(free0.x, free0.y), "build mode: map grid on, cliff and core cells red, free ground not")
+	var pics := []
+	for i in 5:
+		var p := bm.get_node("Root/Cards/Card%d/Picture" % i) as ObjectPortrait
+		pics.append(p.rig != null or p.block != null or not p._items.is_empty())
+	check(pics == [true, true, true, true, true], "every card has a picture from the building's own sprites (%s)" % [pics])
+	check((bm.get_node("Root/Cards/Card1/Picture") as ObjectPortrait).rig == (load("res://game/objects/machine_gun/machine_gun_rig.tres") as TurretRig), "machine gun card: the in-game machine gun sprites")
+	var mg := bm.get_node("Root/Cards/Card1") as Button
+	mg.pressed.emit()
+	check(bm.item != null and bm.item.title == "Кулемет" and mg.position.y < 0.0, "tap a card → it is active (lifted)")
+	mg.pressed.emit()
+	check(bm.item == null and mg.position.y == 0.0, "tap it again → cancelled")
+	mg.pressed.emit()
+	var cell := _free_cell(map, bm.item)
+	var at := _screen_of(map, (Vector2(cell) + Vector2(1, 1)) * MapGrid.CELL)
+	_click(at, at + Vector2(3, 2))
+	check(bm.ghost != null and bm.ghost.cell == cell and bm.problem == "" and info.selected == null, "tap the map → green ghost on its cells (%s), no selection card" % [bm.ghost.cell if bm.ghost else null])
+	check(bm.ghost != null and not map.objects().has(bm.ghost) and w.amount("crystal") == 500, "the ghost is not built yet, nothing paid")
+	_click(at, at + Vector2(220, 0))
+	check(bm.ghost != null and bm.ghost.cell == cell, "a drag (camera pan) does not move the ghost")
+	var slot0 := Builder.free_slots(map)[0].drill_slot_cell() if Builder.free_slots(map).size() > 0 else Vector2i(-1, -1)
+	check(slot0.x < 0 or ov0.blocked_shown(slot0.x, slot0.y), "machine gun chosen: a drill slot is red for it")
+	check(not ov0.blocked_shown(cell.x, cell.y), "the ghost's cells are not red before building")
+	var built := bm.confirm()
+	check(built is Turret and map.objects().has(built) and w.amount("crystal") == 450 and bm.ghost == null and bm.item != null, "✔ builds it (−50), the ghost goes, the card stays active")
+	check(ov0.blocked_shown(cell.x, cell.y) and ov0.blocked_shown(cell.x + 1, cell.y + 1), "the new turret's cells turn red at once")
+	bm.place_at(map.grid.cell_center(cell))
+	check(bm.ghost != null and bm.problem != "" and (bm.get_node("Root/Confirm/Ok") as Button).disabled, "a ghost on taken cells is red, ✔ disabled («%s»)" % bm.problem)
+	(bm.get_node("Root/Confirm/Cancel") as Button).pressed.emit()
+	check(bm.ghost == null, "✖ removes the ghost")
+	# Drill: only into a highlighted free slot.
+	var drill_card := bm.get_node("Root/Cards/Card0") as Button
+	drill_card.pressed.emit()
+	var slots := Builder.free_slots(map)
+	var ov := map.get_node("Shadows/BuildOverlay") as BuildOverlay
+	check(slots.size() > 0 and ov.slots.size() == slots.size(), "drill chosen: the free vein slots light up (%d)" % ov.slots.size())
+	if slots.size() > 0:
+		var sc := slots[0].drill_slot_cell()
+		check(not ov.blocked_shown(sc.x, sc.y), "drill chosen: its free slot is not red")
+	if slots.size() > 0:
+		var want := Drill.slot_ground_point(slots[0], _drill.rig) - _drill.rig.map_shift * MapGrid.CELL
+		check(ov.slots[0].get_center().distance_to(want) < 0.5, "a slot lights up where its drill will stand, not on the bare slot cells")
+	check(not bm.place_at(map.grid.cell_center(cell + Vector2i(0, 4))) and bm.ghost == null, "a tap off a slot puts no drill ghost")
+	if slots.size() > 0:
+		var v := slots[0]
+		check(bm.place_at(Drill.slot_rect(v, _drill.rig).get_center() + Vector2(10, -6)) and bm.ghost is Drill and (bm.ghost as Drill).vein == v and bm.problem == "", "a tap in the slot → drill ghost in it")
+		check(ov.square.get_center().distance_to(bm.ghost.position - _drill.rig.map_shift * MapGrid.CELL) < 1.0, "the green square is under the drill ghost (its ground point map_shift cells below the centre)")
+		var d := bm.confirm()
+		check(d is Drill and (d as Drill).vein == v and w.amount("crystal") == 350 and ov.slots.size() == slots.size() - 1, "✔ builds the drill (−100), its slot no longer lights up")
+		if d:
+			d.free()
+	toggle.pressed.emit()
+	check(not bm.is_open and bm.item == null and bm.ghost == null and not ov.show_map, "✕ closes the build mode, the map grid goes")
+	if built:
+		built.free()
+	w.add("crystal", 200 - w.amount("crystal"))
+
+
 func _target() -> Vector2:
 	var map := _main.get_node("Map03") as GameMap
 	var cells := map.target_cells()
@@ -328,6 +520,10 @@ func _process(_dt: float) -> bool:
 					d.process_mode = Node.PROCESS_MODE_DISABLED
 			if _frame == 70:
 				_test_drones(map)
+			if _frame == 80:
+				_test_builder(map)
+			if _frame == 84:
+				_test_build_menu(map)
 			if _frame == 600:
 				var hud := _main.get_node("GameHud") as GameHud
 				check(int(round(hud.shown)) == Wallet.of(_main).amount("crystal"), "HUD counter rolled up to the wallet (%d)" % int(round(hud.shown)))

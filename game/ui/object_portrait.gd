@@ -5,10 +5,15 @@ extends Control
 ## - a turret (`rig` set): base shadow, base and the head view facing the camera, placed exactly like
 ##   Turret.update_sprites() places them on the map;
 ## - anything else (show_sprites): a snapshot of the object's own Sprite2D nodes in their current pose
-##   (shadows skipped), e.g. the drill's body and arm.
+##   (shadows skipped), e.g. the drill's body and arm;
+## - a placeholder block (`block` set): drawn like BlockBuilding draws itself on the map;
+## - show_scene(): any building scene (the build menu cards) — one of the above for a fresh instance.
 
 @export var rig: TurretRig:
 	set(v): rig = v; _items.clear(); queue_redraw()
+## Placeholder building (wall, relay): its block.
+@export var block: BlockRig:
+	set(v): block = v; queue_redraw()
 ## Ground angle of the turret head view to show, ° (90 = towards the camera).
 @export_range(0.0, 360.0, 0.5) var view_deg := 90.0:
 	set(v): view_deg = v; queue_redraw()
@@ -23,11 +28,12 @@ var _items := []
 ## Snapshot of `obj`'s sprites (not its shadows) relative to the object.
 func show_sprites(obj: Node2D) -> void:
 	rig = null
+	block = null
 	_items.clear()
 	var inv := obj.global_transform.affine_inverse()
 	for n in obj.find_children("*", "Sprite2D", true, false):
 		var s := n as Sprite2D
-		if s.texture == null or not s.is_visible_in_tree() or _in_shadow(s, obj):
+		if s.texture == null or not _visible_under(s, obj) or _in_shadow(s, obj):
 			continue
 		var size := s.region_rect.size if s.region_enabled else s.texture.get_size()
 		var top_left := s.offset - (size * 0.5 if s.centered else Vector2.ZERO)
@@ -35,6 +41,44 @@ func show_sprites(obj: Node2D) -> void:
 		var region := s.region_rect if s.region_enabled else Rect2(Vector2.ZERO, size)
 		_items.append([s.texture, xf, region, s.modulate * s.self_modulate])
 	queue_redraw()
+
+
+## Picture of what `scene` builds, as it looks on the map: a turret from its rig, a block building
+## from its rig, anything else — a snapshot of a fresh instance's sprites (added under this control
+## for a moment, invisible and not running, so its sprites get their scene pose).
+func show_scene(scene: PackedScene) -> void:
+	var o := scene.instantiate()
+	if o is Turret:
+		block = null
+		rig = (o as Turret).get_rig()
+		o.free()
+		return
+	if o is BlockBuilding:
+		rig = null
+		_items.clear()
+		block = (o as BlockBuilding).rig
+		o.free()
+		return
+	var holder := Node2D.new()
+	holder.modulate.a = 0.0
+	holder.process_mode = Node.PROCESS_MODE_DISABLED
+	if o is MapObject:
+		(o as MapObject).ghost = true
+	add_child(holder)
+	holder.add_child(o)
+	show_sprites(o as Node2D)
+	holder.free()
+
+
+## Shown as a part of `top` (its own hidden nodes count; a hidden card strip above it does not).
+static func _visible_under(n: Node, top: Node) -> bool:
+	while n:
+		if n is CanvasItem and not (n as CanvasItem).visible:
+			return false
+		if n == top:
+			return true
+		n = n.get_parent()
+	return true
 
 
 static func _in_shadow(n: Node, top: Node) -> bool:
@@ -48,6 +92,12 @@ static func _in_shadow(n: Node, top: Node) -> bool:
 func _draw() -> void:
 	if rig:
 		_draw_turret()
+	elif block:
+		var box := BlockBuilding.block_box(block)
+		var k := minf(size.x / box.size.x, size.y / box.size.y) * fill
+		draw_set_transform(size * 0.5 - box.get_center() * k, 0.0, Vector2(k, k))
+		BlockBuilding.draw_block(self, block, false)
+		draw_set_transform(Vector2.ZERO)
 	elif not _items.is_empty():
 		_draw_items()
 

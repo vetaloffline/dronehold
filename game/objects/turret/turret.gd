@@ -62,6 +62,9 @@ func _ready() -> void:
 		_fx.draw.connect(_draw_fx)
 	if _fx_top and not _fx_top.draw.is_connected(_draw_fx_top):
 		_fx_top.draw.connect(_draw_fx_top)
+	var r := get_rig()
+	if ghost and r and not r.heads.is_empty() and r.housing.size() >= r.heads.size():
+		update_sprites()  # a build-mode ghost does not run _process: put the sprites in place once
 
 
 # ---------- geometry (tuner geo / pickViews / headPlace, in px спрайта)

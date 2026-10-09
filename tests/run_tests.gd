@@ -23,6 +23,7 @@ func _init() -> void:
 	_test_bullet_pierce()
 	_test_grenade_blast()
 	_test_drone_nav()
+	_test_wall()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	quit(1 if _failed > 0 else 0)
 
@@ -414,3 +415,27 @@ func _test_drone_nav() -> void:
 	var g2 := MapGrid.open(10, 3)
 	g2.set_kind(5, 1, MapGrid.Kind.ROCK)
 	check(not g2.fly_blocked(5, 1) and DroneNav.build(g2).clear(g2.cell_center(Vector2i(1, 1)), g2.cell_center(Vector2i(8, 1))), "a rock cell that is not no-fly does not stop the drone")
+
+
+func _test_wall() -> void:
+	# docs/concept.md «Будівництво»: wall 2×2, 300 hp; slimes walk round it, a full wall across the
+	# pass is still a way (they will chew through once they bite; for now they walk through).
+	var r := load("res://game/objects/wall/wall_rig.tres") as BlockRig
+	check(r.footprint == Vector2i(2, 2) and is_equal_approx(r.max_hp, 300.0) and is_equal_approx(r.path_cost, 60.0), "wall rig: 2×2, 300 hp, path cost 60")
+	# 9×5 field, a 2-cell wall across rows 1..2 at column 4: round it (rows 0 / 3..4) is cheaper.
+	var g := _small_grid(9, 5, [])
+	var f := FlowField.new()
+	var t: Array[Vector2i] = [Vector2i(8, 2)]
+	f.build(g, t, {1 * 9 + 4: r.path_cost, 2 * 9 + 4: r.path_cost})
+	check(f.dist[2 * 9 + 0] < 12.0, "slimes go round a wall (dist %.1f)" % f.dist[2 * 9 + 0])
+	# A wall across the whole pass (rows 0..4): still reachable, through the wall.
+	var across := {}
+	for row in 5:
+		across[row * 9 + 4] = r.path_cost
+	var f2 := FlowField.new()
+	f2.build(g, t, across)
+	check(f2.reachable(0, 2) and f2.dist[2 * 9 + 0] > r.path_cost, "a wall across the pass: still a way, through it (dist %.1f)" % f2.dist[2 * 9 + 0])
+	var w := (load("res://game/objects/wall/wall.tscn") as PackedScene).instantiate() as BlockBuilding
+	w.hp = w.rig.max_hp
+	check(not w.damage(120.0) and is_equal_approx(w.hp, 180.0) and w.damage(180.0) and w.hp == 0.0, "wall hp: 300 − 120 = 180, then 0 → destroyed")
+	w.free()

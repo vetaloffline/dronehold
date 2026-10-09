@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/objects/block/block_building.gd" id="1_block"]
+[ext_resource type="Resource" path="res://game/objects/wall/wall_rig.tres" id="2_rig"]
+
+[node name="Wall" type="Node2D"]
+script = ExtResource("1_block")
+rig = ExtResource("2_rig")
+title = "Стіна"
