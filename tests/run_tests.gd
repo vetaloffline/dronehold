@@ -9,11 +9,14 @@ var _passed := 0
 
 func _init() -> void:
 	_test_grid_from_layout()
+	_test_cell_kinds()
 	_test_flow_field()
 	_test_swarm_ids_and_bins()
 	_test_swarm_queries()
 	_test_crawl_speed()
 	_test_swarm_reaches_target()
+	_test_crowd_spacing()
+	_test_crowd_gets_through()
 	_test_multimesh_buffer_layout()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	quit(1 if _failed > 0 else 0)
@@ -30,20 +33,51 @@ func check(cond: bool, what: String) -> void:
 func _test_grid_from_layout() -> void:
 	var tex := load("res://art/maps/map_03/map_03_layout.png") as Texture2D
 	var g := MapGrid.from_layout(tex.get_image(), 0.5)
-	check(g.cols == 78 and g.rows == 58, "grid 78x58, got %dx%d" % [g.cols, g.rows])
-	# Reference: the editor's coverage() rule computed in Python over the same PNG.
-	check(g.blocked_count() == 1197, "blocked cells 1197, got %d" % g.blocked_count())
+	check(g.cols == 156 and g.rows == 117, "grid 156x117, got %dx%d" % [g.cols, g.rows])
+	# Reference: the editor's coverage() rule ported to Python over the same PNG (the port gives
+	# 1197 on the old 64×48 cells, as the editor did; 4968 on 32×24).
+	check(g.count_kind(MapGrid.Kind.ROCK) == 4968, "rock cells 4968, got %d" % g.count_kind(MapGrid.Kind.ROCK))
+	check(g.blocked_count() == 4968, "slimes can not walk the rock cells, got %d" % g.blocked_count())
+	check(g.count_kind(MapGrid.Kind.GROUND) == g.cols * g.rows - 4968, "the rest is ground")
 
 
 func _small_grid(cols: int, rows: int, walls: Array) -> MapGrid:
-	var g := MapGrid.new()
-	g.cols = cols
-	g.rows = rows
-	g.blocked.resize(cols * rows)
-	g.blocked.fill(0)
+	var g := MapGrid.open(cols, rows)
 	for w in walls:
-		g.blocked[w.y * cols + w.x] = 1
+		g.set_kind(w.x, w.y, MapGrid.Kind.ROCK)
 	return g
+
+
+func _test_cell_kinds() -> void:
+	# Each kind = two rules: build / walk.
+	var g := MapGrid.open(4, 1)
+	g.set_kind(1, 0, MapGrid.Kind.PASS)
+	g.set_kind(2, 0, MapGrid.Kind.ROCK)
+	g.set_kind(3, 0, MapGrid.Kind.PLATEAU)
+	check(g.can_build(0, 0) and g.can_walk(0, 0), "ground: build + walk")
+	check(not g.can_build(1, 0) and g.can_walk(1, 0), "pass: walk only")
+	check(not g.can_build(2, 0) and not g.can_walk(2, 0), "rock: neither")
+	check(g.can_build(3, 0) and not g.can_walk(3, 0), "plateau: build only")
+	check(g.blocked == PackedByteArray([0, 0, 1, 1]), "blocked follows walk, got %s" % g.blocked)
+	check(not g.can_build(-1, 0) and not g.can_walk(4, 0), "outside the map: neither")
+	# Slimes go around a plateau; a pass lets them through.
+	var w := MapGrid.open(5, 3)
+	for r in 3:
+		w.set_kind(2, r, MapGrid.Kind.PLATEAU)
+	var f := FlowField.new()
+	var t: Array[Vector2i] = [Vector2i(4, 1)]
+	f.build(w, t)
+	check(not f.reachable(0, 1), "a plateau wall stops slimes")
+	w.set_kind(2, 1, MapGrid.Kind.PASS)
+	f.build(w, t)
+	check(f.reachable(0, 1), "a pass cell in the plateau lets them through")
+	# Saved and loaded: kinds survive, blocked is rebuilt.
+	var path := "user://test_grid.tres"
+	if ResourceSaver.save(w, path) == OK:
+		var back := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE) as MapGrid
+		check(back.kinds == w.kinds and back.blocked == w.blocked, "grid .tres round trip")
+	else:
+		print("skip: can not write user:// (sandbox)")
 
 
 func _test_flow_field() -> void:
@@ -83,14 +117,14 @@ func _test_swarm_ids_and_bins() -> void:
 	s.setup(8, 4, 4)
 	var ids := []
 	for k in 5:
-		ids.append(s.spawn(Vector2(10 + k * 64, 10), 1.0, 5.0, 0.5, 0.0))
+		ids.append(s.spawn(Vector2(10 + k * MapGrid.CELL.x, 10), 1.0, 5.0, 0.5, 0.0))
 	check(s.count == 5, "spawned 5")
 	s.remove_slot(1)
 	check(s.count == 4, "count after remove")
 	check(not s.alive(ids[1]), "removed id is dead")
 	for k in [0, 2, 3, 4]:
 		check(s.alive(ids[k]), "id %d alive" % k)
-		check(is_equal_approx(s.position_of(ids[k]).x, 10 + k * 64), "id %d keeps its position" % k)
+		check(is_equal_approx(s.position_of(ids[k]).x, 10 + k * MapGrid.CELL.x), "id %d keeps its position" % k)
 	s.bin()
 	var total := 0
 	for v in s.cell_count:
@@ -134,7 +168,7 @@ func _test_crawl_speed() -> void:
 	f.build(g, t)
 	var s := SwarmSim.new()
 	s.setup(4, g.cols, g.rows)
-	s.spawn(Vector2(112, 72), 1.0, 1.0, 0.0, 0.0)
+	s.spawn(Vector2(112, MapGrid.CELL.y * 1.5), 1.0, 1.0, 0.0, 0.0)
 	s.bin()
 	var dt := 1.0 / 60.0
 	var secs := rig.period * 20.0
@@ -162,13 +196,86 @@ func _test_swarm_reaches_target() -> void:
 	for k in 60 * 120:
 		s.step(1.0 / 60.0, f, g, crawl, rig.width_px())
 		for i in s.count:
-			if g.is_blocked(int(s.px[i] / 64.0), int(s.py[i] / 48.0)):
+			if g.is_blocked(int(s.px[i] / MapGrid.CELL.x), int(s.py[i] / MapGrid.CELL.y)):
 				in_wall += 1
 		if s.count == 0:
 			break
 	check(s.count == 0, "all slimes reached the target around the wall, left %d" % s.count)
 	check(in_wall == 0, "no slime ever stood in a wall (%d)" % in_wall)
 	check(s.reached_total == 30, "reached_total 30, got %d" % s.reached_total)
+
+
+func _crowd_at_gap(n: int) -> Array:
+	# Wall with a 1-cell gap, target behind it; `n` slimes spawned on the left.
+	var rig := load("res://game/objects/slime/slime_rig.tres") as SlimeRig
+	var g := _small_grid(24, 14, [])
+	for r in 14:
+		if r != 7:
+			g.set_kind(14, r, MapGrid.Kind.ROCK)
+	var f := FlowField.new()
+	var t: Array[Vector2i] = [Vector2i(23, 7)]
+	f.build(g, t)
+	var s := SwarmSim.new()
+	s.setup(512, g.cols, g.rows)
+	var sw := Swarm.new()
+	s.cell_capacity = sw.cell_capacity
+	s.push_strength = sw.push_strength
+	s.spread_strength = sw.spread_strength
+	s.body = sw.body
+	s.cohesion = sw.cohesion
+	sw.free()
+	seed(3)
+	for k in n:
+		s.spawn(Vector2(randf_range(20, 400), randf_range(20, 320)), 1.0 + randf_range(-0.25, 0.25), 1.0, randf(), randf())
+	s.bin()
+	return [s, f, g, SlimeCrawl.new(rig), rig.width_px()]
+
+
+func _test_crowd_spacing() -> void:
+	# Jammed at the gap: a pile — the 3 nearest neighbours ≈ 0.75 picture width away (body 0.8),
+	# not one slime per cell (the old model: ≈ 1 width and more).
+	var c := _crowd_at_gap(200)
+	var s: SwarmSim = c[0]
+	var w: float = c[4]
+	for k in 60 * 25:
+		s.step(1.0 / 60.0, c[1], c[2], c[3], w)
+	var wall_x := 14 * MapGrid.CELL.x
+	var nn := PackedFloat32Array()
+	var d3 := PackedFloat32Array()
+	for i in s.count:
+		if s.px[i] > wall_x:
+			continue
+		var near := PackedFloat32Array()
+		for j in s.count:
+			if j != i and s.px[j] < wall_x:
+				near.append(Vector2(s.px[i] - s.px[j], (s.py[i] - s.py[j]) / 0.75).length())
+		near.sort()
+		nn.append(near[0] / w)
+		d3.append((near[0] + near[1] + near[2]) / 3.0 / w)
+	nn.sort()
+	d3.sort()
+	var med := d3[d3.size() / 2]
+	print("crowd: 3 nearest / width: p25 %.2f median %.2f p75 %.2f; nearest min %.2f (%d slimes)" % [d3[d3.size() / 4], med, d3[d3.size() * 3 / 4], nn[0], d3.size()])
+	check(med > 0.62 and med < 0.86, "jammed crowd is a pile: 3 nearest ≈ 0.75 width, got %.2f" % med)
+	check(nn[0] > 0.1, "no two slimes on one spot, nearest min %.2f" % nn[0])
+
+
+func _test_crowd_gets_through() -> void:
+	# The pile must drain through a 1-cell gap (cohesion must not hold the leaders back) and no
+	# slime may end up inside the wall (float32 rounding at the wall edge used to put them there).
+	var c := _crowd_at_gap(60)
+	var s: SwarmSim = c[0]
+	var g: MapGrid = c[2]
+	var in_wall := 0
+	for k in 60 * 75:
+		s.step(1.0 / 60.0, c[1], g, c[3], c[4])
+		for i in s.count:
+			if g.is_blocked(int(s.px[i] / MapGrid.CELL.x), int(s.py[i] / MapGrid.CELL.y)):
+				in_wall += 1
+		if s.count == 0:
+			break
+	check(s.count == 0, "60 slimes get through a 1-cell gap in 75 s, left %d" % s.count)
+	check(in_wall == 0, "no slime inside the wall (%d)" % in_wall)
 
 
 func _test_multimesh_buffer_layout() -> void:
