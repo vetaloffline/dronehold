@@ -1,6 +1,7 @@
 @tool
 extends Node2D
-## Editor overlay of a GameMap: grid lines, cell kinds (rock red, pass yellow, plateau blue),
+## Editor overlay of a GameMap: grid lines, cell kinds (rock red, pass yellow, plateau blue), the drone
+## layer (purple),
 ## object footprints —
 ## green when the object may stand there, red when not (GameMap.placement_problem()).
 
@@ -11,6 +12,8 @@ const KIND_COLORS := {
 	MapGrid.Kind.ROCK: Color(1, 0.16, 0.16, 0.3),
 	MapGrid.Kind.PLATEAU: Color(0.3, 0.55, 1, 0.3),
 }
+## Drone layer: drones do not fly over these cells.
+const NO_FLY_COLOR := Color(0.62, 0.22, 1.0, 0.38)
 const OK_COLOR := Color(0.24, 1, 0.47, 0.9)
 const BAD_COLOR := Color(1, 0.24, 0.24, 0.95)
 
@@ -27,6 +30,11 @@ func _draw() -> void:
 				var k := g.kinds[r * g.cols + c]
 				if k != MapGrid.Kind.GROUND:
 					draw_rect(Rect2(g.cell_origin(Vector2i(c, r)), MapGrid.CELL), KIND_COLORS[k])
+	if map.show_no_fly:
+		for r in g.rows:
+			for c in g.cols:
+				if g.fly_blocked(c, r):
+					draw_rect(Rect2(g.cell_origin(Vector2i(c, r)), MapGrid.CELL), NO_FLY_COLOR)
 	if map.show_grid:
 		for c in g.cols + 1:
 			draw_line(Vector2(c * MapGrid.CELL.x, 0), Vector2(c * MapGrid.CELL.x, size.y), GRID_COLOR, 1.0)

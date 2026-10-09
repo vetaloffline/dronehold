@@ -171,6 +171,109 @@ func damage_radius(pos: Vector2, radius: float, amount: float) -> int:
 	return killed
 
 
+## hp of a live slime (0 if dead).
+func hp_of(id: int) -> float:
+	var i := slot_of_id[id] if id >= 0 and id < slot_of_id.size() else -1
+	return hp[i] if i >= 0 else 0.0
+
+
+## Damage one slime from a bullet's damage pool: kills it if the pool covers its hp (the pool loses
+## that hp), else wounds it with the whole pool. Returns what is left of the pool.
+func hit_with_pool(id: int, pool: float) -> float:
+	var h := hp_of(id)
+	if h <= 0.0 or pool <= 0.0:
+		return pool
+	if pool >= h:
+		damage(id, h)
+		return pool - h
+	damage(id, pool)
+	return 0.0
+
+
+## A bullet with `pool` damage flies on from `from` along `dir` (unit, map px) for `length` px and
+## hits every slime whose centre is within `radius` of the line, nearest first, until the pool runs
+## out or `max_hits` is reached (docs/concept.md «Пробиття»). `skip_id` = the slime already hit.
+## Returns {"stop": px along the line where it stopped (length if it flew through), "kills", "left"}.
+func pierce(from: Vector2, dir: Vector2, length: float, pool: float, radius: float, max_hits: int, skip_id := -1) -> Dictionary:
+	var out := {"stop": length, "kills": 0, "left": pool}
+	if pool <= 0.0 or length <= 0.0:
+		out.stop = 0.0
+		return out
+	# Cells under the line, widened by `radius` (sample every half cell).
+	var cells := {}
+	var step := minf(MapGrid.CELL.x, MapGrid.CELL.y) * 0.5
+	var n := int(ceil(length / step))
+	for s in n + 1:
+		var p := from + dir * minf(s * step, length)
+		var c0 := maxi(0, int(floor((p.x - radius) / MapGrid.CELL.x)))
+		var c1 := mini(cols - 1, int(floor((p.x + radius) / MapGrid.CELL.x)))
+		var r0 := maxi(0, int(floor((p.y - radius) / MapGrid.CELL.y)))
+		var r1 := mini(rows - 1, int(floor((p.y + radius) / MapGrid.CELL.y)))
+		for r in range(r0, r1 + 1):
+			for c in range(c0, c1 + 1):
+				cells[r * cols + c] = true
+	# Slimes on the line, sorted by distance along it (ids, not slots: a kill moves slots).
+	var cand := []
+	for ci in cells:
+		for k in range(cell_start[ci], cell_start[ci] + cell_count[ci]):
+			var i := order[k]
+			if i >= count or id_of[i] == skip_id:
+				continue
+			var v := Vector2(px[i], py[i]) - from
+			var t := v.dot(dir)
+			if t < 0.0 or t > length or absf(v.cross(dir)) > radius:
+				continue
+			cand.append([t, id_of[i]])
+	cand.sort_custom(func(a, b) -> bool: return a[0] < b[0])
+	var left := pool
+	var hits := 0
+	for e in cand:
+		var id: int = e[1]
+		if hp_of(id) <= 0.0:
+			continue
+		left = hit_with_pool(id, left)
+		hits += 1
+		if hp_of(id) <= 0.0:
+			out.kills += 1
+		if left <= 0.0 or hits >= max_hits:
+			out.stop = e[0]
+			break
+	out.left = left
+	return out
+
+
+## Grenade blast: `core_damage` within `core_r` of `pos`, then from `ring_near` falling to `ring_far`
+## at `radius` (docs/concept.md «Гранатомет»). Returns how many died.
+func damage_blast(pos: Vector2, core_r: float, core_damage: float, radius: float, ring_near: float, ring_far: float) -> int:
+	var hit := []
+	var c0 := maxi(0, int(floor((pos.x - radius) / MapGrid.CELL.x)))
+	var c1 := mini(cols - 1, int(floor((pos.x + radius) / MapGrid.CELL.x)))
+	var r0 := maxi(0, int(floor((pos.y - radius) / MapGrid.CELL.y)))
+	var r1 := mini(rows - 1, int(floor((pos.y + radius) / MapGrid.CELL.y)))
+	var r2 := radius * radius
+	for r in range(r0, r1 + 1):
+		for c in range(c0, c1 + 1):
+			var ci := r * cols + c
+			for k in range(cell_start[ci], cell_start[ci] + cell_count[ci]):
+				var i := order[k]
+				if i >= count:
+					continue
+				var dx := px[i] - pos.x
+				var dy := py[i] - pos.y
+				var d2 := dx * dx + dy * dy
+				if d2 <= r2:
+					hit.append([id_of[i], sqrt(d2)])
+	var killed := 0
+	for e in hit:
+		var d: float = e[1]
+		var amount := core_damage
+		if d > core_r:
+			amount = lerpf(ring_near, ring_far, (d - core_r) / maxf(0.001, radius - core_r))
+		if damage(e[0], amount):
+			killed += 1
+	return killed
+
+
 ## Nearest slime id within `max_range`, searching rings of cells outwards; −1 if none.
 func nearest(pos: Vector2, max_range: float) -> int:
 	return nearest_in_cone(pos, max_range, Vector2.ZERO, -2.0)

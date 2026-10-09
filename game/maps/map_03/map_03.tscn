@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://dx5pkdmp5s25" path="res://game/core/game_map.gd" id="1_3o6hr"]
 [ext_resource type="Texture2D" uid="uid://ckvgftudixkjn" path="res://art/maps/map_03/map_03_layout.png" id="2_eruss"]
-[ext_resource type="Resource" path="res://game/maps/map_03/map_03_grid.tres" id="3_grid"]
+[ext_resource type="Resource" uid="uid://drusky85vw17y" path="res://game/maps/map_03/map_03_grid.tres" id="3_grid"]
 [ext_resource type="Texture2D" uid="uid://cvp6ojam48rqn" path="res://game/maps/map_03/ground/ground_0_0.webp" id="4_5neck"]
 [ext_resource type="Texture2D" uid="uid://twji4j762bih" path="res://game/maps/map_03/ground/ground_0_1.webp" id="5_gauxf"]
 [ext_resource type="Texture2D" uid="uid://dkukb5hvy0kt2" path="res://game/maps/map_03/ground/ground_0_2.webp" id="6_mf3hx"]
@@ -10,11 +10,12 @@
 [ext_resource type="Texture2D" uid="uid://b7qpynl0y6s3l" path="res://game/maps/map_03/ground/ground_1_1.webp" id="8_lso6l"]
 [ext_resource type="Texture2D" uid="uid://bvsj4kotkg2sk" path="res://game/maps/map_03/ground/ground_1_2.webp" id="9_dvj66"]
 [ext_resource type="Shader" uid="uid://bomjahyr7kqs" path="res://game/core/rot.gdshader" id="10_pf53r"]
-[ext_resource type="PackedScene" path="res://game/objects/core/core.tscn" id="11_eg5y7"]
+[ext_resource type="PackedScene" uid="uid://dshg23s6houjy" path="res://game/objects/core/core.tscn" id="11_eg5y7"]
 [ext_resource type="PackedScene" path="res://game/objects/crystal_vein/crystal_vein.tscn" id="14_g6v5g"]
-[ext_resource type="PackedScene" path="res://game/objects/drill/drill.tscn" id="17_q02f5"]
-[ext_resource type="PackedScene" path="res://game/objects/machine_gun/machine_gun.tscn" id="20_phl7a"]
-[ext_resource type="PackedScene" path="res://game/objects/grenade_launcher/grenade_launcher.tscn" id="23_tw873"]
+[ext_resource type="PackedScene" path="res://game/core/prop.tscn" id="15_8y7ng"]
+[ext_resource type="Texture2D" uid="uid://c7mc5vwchqo3k" path="res://art/maps/props/prop_tree_mid.png" id="16_f6ue7"]
+[ext_resource type="Texture2D" uid="uid://d3i70o6n1v5qi" path="res://art/maps/props/prop_trees_5.png" id="17_0enok"]
+[ext_resource type="PackedScene" uid="uid://b81v0ti0rba1x" path="res://game/objects/drill/drill.tscn" id="17_q02f5"]
 [ext_resource type="PackedScene" path="res://game/core/spawn_point.tscn" id="26_y2lld"]
 [ext_resource type="Script" uid="uid://bqy0ylpnbivcm" path="res://game/core/grid_overlay.gd" id="28_khui3"]
 [ext_resource type="Script" uid="uid://bobswigdkaif0" path="res://game/swarm/swarm.gd" id="29_42h6n"]
@@ -43,8 +44,8 @@ shader_parameter/vein_noise = SubResource("NoiseTexture2D_xaeky")
 shader_parameter/map_size = Vector2(5016, 2823)
 shader_parameter/alpha = 0.85
 shader_parameter/cam_k = 0.75
-shader_parameter/clears = PackedVector4Array(1568, 1608, 544, 96, 1248, 2088, 160, 96, 1824, 1416, 192, 96, 1632, 1704, 224, 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-shader_parameter/clear_count = 4
+shader_parameter/clears = PackedVector4Array(992, 1488, 544, 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+shader_parameter/clear_count = 1
 shader_parameter/base_color = Color(0.102, 0.059, 0.133, 1)
 shader_parameter/blotch_color = Color(0.275, 0.078, 0.353, 1)
 shader_parameter/dark_color = Color(0.039, 0.02, 0.059, 1)
@@ -104,50 +105,154 @@ z_index = -1
 [node name="World" type="Node2D" parent="." unique_id=697814379]
 y_sort_enabled = true
 
-[node name="Core_23_32" parent="World" unique_id=663891361 groups=["enemy_target"] instance=ExtResource("11_eg5y7")]
-position = Vector2(1568, 1665.6)
-scale = Vector2(0.2, 0.2)
-cell = Vector2i(46, 64)
+[node name="Core_23_32" parent="World" unique_id=663891361 instance=ExtResource("11_eg5y7")]
+position = Vector2(992, 1545.6)
+cell = Vector2i(28, 59)
 
 [node name="Vein_16_44" parent="World" unique_id=1413486064 instance=ExtResource("14_g6v5g")]
-position = Vector2(1120, 2251.2)
+position = Vector2(416, 2587.2)
 scale = Vector2(0.24, 0.24)
-cell = Vector2i(32, 88)
+cell = Vector2i(10, 102)
+
+[node name="Vein_16_46" parent="World" unique_id=923345988 instance=ExtResource("14_g6v5g")]
+position = Vector2(3488, 2635.2)
+scale = Vector2(0.24, 0.24)
+drill_side = 1
+cell = Vector2i(106, 104)
+
+[node name="Vein_16_45" parent="World" unique_id=1746853310 instance=ExtResource("14_g6v5g")]
+position = Vector2(416, 475.2)
+scale = Vector2(0.24, 0.24)
+cell = Vector2i(10, 14)
 
 [node name="Vein_50_14" parent="World" unique_id=123026078 instance=ExtResource("14_g6v5g")]
 position = Vector2(3296, 811.2)
 scale = Vector2(0.24, 0.24)
 cell = Vector2i(100, 28)
 
-[node name="Drill_19_43" parent="World" unique_id=1262980953 instance=ExtResource("17_q02f5")]
-position = Vector2(1262.8, 2166.72)
+[node name="Drill" parent="World" unique_id=1198615486 instance=ExtResource("17_q02f5")]
+position = Vector2(558.8, 390.72003)
 scale = Vector2(0.12, 0.12)
-cell = Vector2i(38, 86)
-
-[node name="Turret_28_29" parent="World" unique_id=1791091541 instance=ExtResource("20_phl7a")]
-position = Vector2(1824, 1416)
-scale = Vector2(0.3, 0.3)
-cell = Vector2i(56, 58)
-
-[node name="Launcher_25_35" parent="World" unique_id=145998001 instance=ExtResource("23_tw873")]
-position = Vector2(1632, 1704)
-scale = Vector2(0.27, 0.27)
-cell = Vector2i(50, 70)
+cell = Vector2i(16, 12)
 
 [node name="Spawns" type="Node2D" parent="." unique_id=806465198]
 
 [node name="Spawn_76_29" parent="Spawns" unique_id=794959223 groups=["enemy_spawn"] instance=ExtResource("26_y2lld")]
-position = Vector2(4896, 1416)
-cell = Vector2i(152, 58)
+position = Vector2(5120, 1128)
+cell = Vector2i(159, 46)
 
 [node name="Spawn_39_1" parent="Spawns" unique_id=1791664811 groups=["enemy_spawn"] instance=ExtResource("26_y2lld")]
-position = Vector2(2528, 72)
-cell = Vector2i(78, 2)
+position = Vector2(2400, -96)
+cell = Vector2i(74, -5)
+
+[node name="Spawn_39_2" parent="Spawns" unique_id=145016010 groups=["enemy_spawn"] instance=ExtResource("26_y2lld")]
+position = Vector2(4128, -120)
+cell = Vector2i(128, -6)
+
+[node name="Spawn_39_3" parent="Spawns" unique_id=1866978707 groups=["enemy_spawn"] instance=ExtResource("26_y2lld")]
+position = Vector2(5120, 2136)
+cell = Vector2i(159, 88)
 
 [node name="Overlay" type="Node2D" parent="." unique_id=409469681]
 visible = false
 z_index = 10
 script = ExtResource("28_khui3")
+
+[node name="Prop6" parent="." unique_id=1426337084 instance=ExtResource("15_8y7ng")]
+texture_filter = 4
+position = Vector2(1056, 2320.8)
+scale = Vector2(0.3744681, 0.3744681)
+kind = "tree_mid"
+fill = 1.1
+foot = Vector2i(2, 2)
+ground = Vector2(160, 264)
+body_w = 188.0
+texture = ExtResource("16_f6ue7")
+cell = Vector2i(32, 95)
+
+[node name="Prop" parent="." unique_id=2046321072 instance=ExtResource("15_8y7ng")]
+texture_filter = 4
+position = Vector2(736, 1113.6)
+scale = Vector2(0.4292683, 0.4292683)
+kind = "trees_5"
+fill = 1.1
+foot = Vector2i(4, 4)
+ground = Vector2(220, 340)
+body_w = 328.0
+texture = ExtResource("17_0enok")
+cell = Vector2i(21, 43)
+
+[node name="Prop7" parent="." unique_id=501480049 instance=ExtResource("15_8y7ng")]
+texture_filter = 4
+position = Vector2(768, 1720.8)
+scale = Vector2(0.3744681, 0.3744681)
+kind = "tree_mid"
+fill = 1.1
+foot = Vector2i(2, 2)
+ground = Vector2(160, 264)
+body_w = 188.0
+texture = ExtResource("16_f6ue7")
+cell = Vector2i(23, 70)
+
+[node name="Prop2" parent="." unique_id=1963645164 instance=ExtResource("15_8y7ng")]
+texture_filter = 4
+position = Vector2(1408, 2001.6)
+scale = Vector2(0.4292683, 0.4292683)
+kind = "trees_5"
+fill = 1.1
+foot = Vector2i(4, 4)
+ground = Vector2(220, 340)
+body_w = 328.0
+texture = ExtResource("17_0enok")
+cell = Vector2i(42, 80)
+
+[node name="Prop5" parent="." unique_id=240467720 instance=ExtResource("15_8y7ng")]
+texture_filter = 4
+position = Vector2(608, 2224.8)
+scale = Vector2(0.3744681, 0.3744681)
+kind = "tree_mid"
+fill = 1.1
+foot = Vector2i(2, 2)
+ground = Vector2(160, 264)
+body_w = 188.0
+texture = ExtResource("16_f6ue7")
+cell = Vector2i(18, 91)
+
+[node name="Prop8" parent="." unique_id=284706174 instance=ExtResource("15_8y7ng")]
+texture_filter = 4
+position = Vector2(896, 2848.8)
+scale = Vector2(0.3744681, 0.3744681)
+kind = "tree_mid"
+fill = 1.1
+foot = Vector2i(2, 2)
+ground = Vector2(160, 264)
+body_w = 188.0
+texture = ExtResource("16_f6ue7")
+cell = Vector2i(27, 117)
+
+[node name="Prop3" parent="." unique_id=530783577 instance=ExtResource("15_8y7ng")]
+texture_filter = 4
+position = Vector2(512, 1953.6)
+scale = Vector2(0.4292683, 0.4292683)
+kind = "trees_5"
+fill = 1.1
+foot = Vector2i(4, 4)
+ground = Vector2(220, 340)
+body_w = 328.0
+texture = ExtResource("17_0enok")
+cell = Vector2i(14, 78)
+
+[node name="Prop4" parent="." unique_id=998830350 instance=ExtResource("15_8y7ng")]
+texture_filter = 4
+position = Vector2(608, 1209.6)
+scale = Vector2(0.4292683, 0.4292683)
+kind = "trees_5"
+fill = 1.1
+foot = Vector2i(4, 4)
+ground = Vector2(220, 340)
+body_w = 328.0
+texture = ExtResource("17_0enok")
+cell = Vector2i(17, 47)
 
 [node name="Swarm" type="Node" parent="." unique_id=1668564555 node_paths=PackedStringArray("map")]
 script = ExtResource("29_42h6n")

@@ -9,6 +9,9 @@ extends MapObject
 
 const PROPS_JSON := "res://art/maps/props/props.json"
 const PROPS_DIR := "res://art/maps/props/"
+## Kinds the drones fly round when `flight` is Auto: trees and big rocks (rule of 2026-10-09).
+const FLY_ROUND_KINDS := ["tree_tall", "tree_mid", "tree_small", "trees_3", "trees_5", "tree_dead",
+	"rock_m1", "rock_m2", "rock_m3", "rock_spire", "rock_mesa"]
 
 @export_enum("rock_s1", "rock_s2", "rock_s3", "rock_m1", "rock_m2", "rock_m3", "rock_spire", "rock_mesa", "rock_pit", "tree_tall", "tree_mid", "tree_small", "trees_3", "trees_5", "tree_dead", "bush_round", "bush_wide", "stump")
 var kind := "rock_s1":
@@ -19,6 +22,9 @@ var kind := "rock_s1":
 		_apply()
 ## Decor does not occupy cells (you can build over it).
 @export var decor := false
+## Cargo drones fly round it (tall trees, big rocks) or over it (small stones, bushes, stumps).
+## Auto = by `kind` (FLY_ROUND_KINDS).
+@export_enum("Auto", "Fly round", "Fly over") var flight := 0
 ## Size of the body relative to its footprint (map editor «propFill»).
 @export_range(0.3, 2.0, 0.01) var fill := 1.0:
 	set(v): fill = v; _apply()
@@ -32,6 +38,15 @@ var kind := "rock_s1":
 
 func get_footprint() -> Vector2i:
 	return foot
+
+
+## Cargo drones do not fly over its cells (DroneNav).
+func blocks_flight() -> bool:
+	if flight == 1:
+		return true
+	if flight == 2:
+		return false
+	return kind in FLY_ROUND_KINDS
 
 
 func get_map_scale() -> float:

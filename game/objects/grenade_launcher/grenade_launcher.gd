@@ -2,8 +2,8 @@
 class_name GrenadeLauncher
 extends Turret
 ## Grenade launcher (machine_gun_scene.html, mo*): turns by 8 views (approved) or tilts its tube
-## left-right (tilt mode); lobs a shell on an arc to where the target was; the blast damages every
-## slime within `blast`. Tilt mode: cradle + telescopic tube that slides in on each shot.
+## left-right (tilt mode); lobs a shell on an arc to where the target was; the blast does full damage
+## within `blast_core` and wounds (ring_near → ring_far) up to `blast`. Tilt mode: cradle + telescopic tube that slides in on each shot.
 
 @export var rig: GrenadeLauncherRig:
 	set(v):
@@ -32,6 +32,10 @@ var _sparks := []
 
 func get_rig() -> TurretRig:
 	return rig
+
+
+func display_name() -> String:
+	return "Гранатомет"
 
 
 func get_clear_radius() -> float:
@@ -120,11 +124,13 @@ func step_fx(dt: float) -> void:
 			keep.append(s)
 			continue
 		_blasts.append({"p": s.to, "age": 0.0})
-		for j in 40:
-			_sparks.append(make_spark(s.to, BLAST_SPARK_SPEED * t2l, Color8(255, 170, 60) if _rng.randf() < 0.5 else Color8(255, 90, 40), 0.6))
+		# Sparks fly as far as the blast reaches (BLAST_SPARK_SPEED was tuned for a 45 px blast).
+		var spark_k := clampf(rig.blast / 45.0, 1.0, 3.0)
+		for j in 60:
+			_sparks.append(make_spark(s.to, BLAST_SPARK_SPEED * spark_k * t2l, Color8(255, 170, 60) if _rng.randf() < 0.5 else Color8(255, 90, 40), 0.6))
 		var sim := swarm_sim()
 		if sim:
-			sim.damage_radius(to_map(s.to), rig.blast, rig.damage)
+			sim.damage_blast(to_map(s.to), rig.blast_core, rig.damage, rig.blast, rig.ring_near, rig.ring_far)
 	_shells = keep
 	var bl := []
 	for b in _blasts:
@@ -193,10 +199,14 @@ func _draw() -> void:
 	var m2l := rig.map_to_local()
 	var t2l := rig.tuner_to_local()
 	var bl := rig.blast * m2l
+	var core := maxf(rig.blast_core * m2l, bl * 0.2)
 	for b in _blasts:
 		var k: float = b.age / BLAST_LIFE
-		ellipse(self, b.p, bl * 0.8, bl * 0.8 * rig.cam_k, Color8(20, 10, 5, int(255 * 0.35 * (1.0 - k))))
-		ellipse_ring(self, b.p, bl * (0.3 + k), bl * (0.3 + k) * rig.cam_k, Color8(255, 200, 120, int(255 * (1.0 - k))), (6.0 * (1.0 - k) + 1.0) * t2l)
+		# Scorch over the whole blast (darker in the killing core); the shock ring runs out to the edge.
+		ellipse(self, b.p, bl * 0.65, bl * 0.65 * rig.cam_k, Color8(20, 10, 5, int(255 * 0.22 * (1.0 - k))))
+		ellipse(self, b.p, core * 1.3, core * 1.3 * rig.cam_k, Color8(20, 10, 5, int(255 * 0.35 * (1.0 - k))))
+		var ring := core + (bl - core) * sqrt(k)
+		ellipse_ring(self, b.p, ring, ring * rig.cam_k, Color8(255, 200, 120, int(255 * (1.0 - k))), (10.0 * (1.0 - k) + 2.0) * t2l)
 	var sh := rig.shell * m2l
 	for s in _shells:
 		var p := _shell_pos(s)
@@ -208,13 +218,17 @@ func _draw_fx() -> void:
 	super()
 	if rig == null:
 		return
+	# Fireball as wide as the blast (the wound zone), white-hot centre the size of the killing core.
 	var bl := rig.blast * rig.map_to_local()
+	var core := maxf(rig.blast_core, rig.blast * 0.2) * rig.map_to_local()
 	var up := Vector2(0.0, -20.0 * rig.tuner_to_local())
 	for b in _blasts:
 		var k: float = b.age / BLAST_LIFE
-		if k < 0.35:
-			glow(_fx, b.p + up, bl * (1.2 - k), Color8(255, 160, 60), 0.9 * (1.0 - k / 0.35))
-			glow(_fx, b.p + up, bl * 0.4, Color8(255, 245, 210), 1.0 - k / 0.35)
+		if k < 0.4:
+			var f := 1.0 - k / 0.4
+			glow(_fx, b.p + up, bl * (0.75 + 0.25 * k / 0.4), Color8(255, 140, 50), 0.8 * f)
+			glow(_fx, b.p + up, core * 1.8, Color8(255, 200, 110), 0.95 * f)
+			glow(_fx, b.p + up, core * 0.9, Color8(255, 245, 210), f)
 	draw_sparks(_fx, _sparks, SPARK_WIDTH * rig.tuner_to_local())
 
 

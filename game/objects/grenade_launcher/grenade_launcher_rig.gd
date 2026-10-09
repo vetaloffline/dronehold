@@ -15,9 +15,9 @@ func _init() -> void:
 	turn_strength = 0.0
 	rot_speed = 120.0
 	tolerance = 5.0
-	range_px = 540.0
-	fire_rate = 0.7
-	damage = 6.0
+	range_px = 810.0  # ×1.5 від тюнера (540), рішення 2026-10-09: ~25 клітинок
+	fire_rate = 0.5
+	damage = 20.0
 	recoil = 18.0
 	recoil_return = 0.3
 	flash = 80.0
@@ -34,8 +34,13 @@ func _init() -> void:
 @export_range(0.3, 4.0, 0.05) var flight := 1.3
 ## Висота дуги, px карти (тюнер 600).
 @export_range(10.0, 500.0, 1.0) var arc := 180.0
-## Радіус вибуху, px карти (тюнер 150).
-@export_range(5.0, 150.0, 0.5) var blast := 45.0
+## Радіус вибуху, px карти: до нього слизні поранені (docs/concept.md «Гранатомет»: 4 клітинки = 128).
+@export_range(5.0, 300.0, 0.5) var blast := 128.0
+## Ядро вибуху, px карти: тут — повний `damage` (20 вбиває 5–10 слизнів у купі при 28 px).
+@export_range(0.0, 150.0, 0.5) var blast_core := 28.0
+## Урон від краю ядра до краю вибуху: падає з `ring_near` до `ring_far` (менше 3 hp слизня — лише ранить).
+@export_range(0.0, 50.0, 0.1) var ring_near := 2.0
+@export_range(0.0, 50.0, 0.1) var ring_far := 1.5
 ## Розмір снаряда, px карти (тюнер 12).
 @export_range(0.5, 15.0, 0.1) var shell := 3.6
 

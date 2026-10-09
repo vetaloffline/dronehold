@@ -1,20 +1,32 @@
-[gd_resource type="Theme" load_steps=11 format=3]
+[gd_resource type="Theme" format=3 uid="uid://bd42r465w5jin"]
 
-[ext_resource type="Texture2D" path="res://art/objects/ui/main_menu/btn_gold.png" id="1_gold"]
-[ext_resource type="Texture2D" path="res://art/objects/ui/main_menu/btn_dark.png" id="2_dark"]
-
-[sub_resource type="SystemFont" id="SystemFont_menu"]
-font_names = PackedStringArray("Avenir Next", "Roboto", "Segoe UI", "sans-serif")
-font_weight = 700
+[ext_resource type="Texture2D" uid="uid://5uo0xobxyuld" path="res://art/objects/ui/main_menu/btn_gold.png" id="1_gold"]
+[ext_resource type="Texture2D" uid="uid://dlg5y4nbyc5is" path="res://art/objects/ui/main_menu/btn_dark.png" id="2_dark"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_focus"]
 
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_gold"]
-texture = ExtResource("1_gold")
-texture_margin_left = 99.0
-texture_margin_top = 40.0
-texture_margin_right = 99.0
-texture_margin_bottom = 40.0
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_dark_hover"]
+texture = ExtResource("2_dark")
+texture_margin_left = 85.0
+texture_margin_top = 34.0
+texture_margin_right = 85.0
+texture_margin_bottom = 34.0
+modulate_color = Color(1.2, 1.2, 1.2, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_dark_pressed"]
+texture = ExtResource("2_dark")
+texture_margin_left = 85.0
+texture_margin_top = 34.0
+texture_margin_right = 85.0
+texture_margin_bottom = 34.0
+modulate_color = Color(0.8, 0.8, 0.8, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_dark"]
+texture = ExtResource("2_dark")
+texture_margin_left = 85.0
+texture_margin_top = 34.0
+texture_margin_right = 85.0
+texture_margin_bottom = 34.0
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_gold_hover"]
 texture = ExtResource("1_gold")
@@ -32,28 +44,16 @@ texture_margin_right = 99.0
 texture_margin_bottom = 40.0
 modulate_color = Color(0.82, 0.82, 0.82, 1)
 
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_dark"]
-texture = ExtResource("2_dark")
-texture_margin_left = 85.0
-texture_margin_top = 34.0
-texture_margin_right = 85.0
-texture_margin_bottom = 34.0
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_gold"]
+texture = ExtResource("1_gold")
+texture_margin_left = 99.0
+texture_margin_top = 40.0
+texture_margin_right = 99.0
+texture_margin_bottom = 40.0
 
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_dark_hover"]
-texture = ExtResource("2_dark")
-texture_margin_left = 85.0
-texture_margin_top = 34.0
-texture_margin_right = 85.0
-texture_margin_bottom = 34.0
-modulate_color = Color(1.2, 1.2, 1.2, 1)
-
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_dark_pressed"]
-texture = ExtResource("2_dark")
-texture_margin_left = 85.0
-texture_margin_top = 34.0
-texture_margin_right = 85.0
-texture_margin_bottom = 34.0
-modulate_color = Color(0.8, 0.8, 0.8, 1)
+[sub_resource type="SystemFont" id="SystemFont_menu"]
+font_names = PackedStringArray("Avenir Next", "Roboto", "Segoe UI", "sans-serif")
+font_weight = 700
 
 [resource]
 default_font = SubResource("SystemFont_menu")

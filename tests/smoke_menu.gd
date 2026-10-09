@@ -1,5 +1,6 @@
 extends SceneTree
-## Start the game like a player: menu → «Тест турелі» → 0 slimes → a click spawns one → «Меню».
+## Start the game like a player: menu → «Тест кулемета» → 0 slimes → a click spawns one → «Меню»
+## → «Грати» (level 1: map_03 with the crystal counter) → «Меню».
 ##   godot --headless --path . --script res://tests/smoke_menu.gd
 ## Exit 0 and «menu: 0 failed» = ok.
 
@@ -37,9 +38,10 @@ func _press(text_start: String) -> bool:
 ## Look, drones and the sound toggle of the main menu.
 func _check_menu() -> void:
 	var m := current_scene
-	var gold := m.get_node("Menu/Buttons/MachineGunTest") as Button
-	check(gold.theme_type_variation == &"GoldButton" and gold.get_theme_stylebox("normal") is StyleBoxTexture, "the first button is gold (theme GoldButton)")
-	var dark := m.get_node("Menu/Buttons/GrenadeLauncherTest") as Button
+	var gold := m.get_node("Menu/Buttons/Play") as Button
+	check(gold.theme_type_variation == &"GoldButton" and gold.get_theme_stylebox("normal") is StyleBoxTexture, "the first button «Грати» is gold (theme GoldButton)")
+	check(gold.get_index() == 0 and gold.text == "Грати", "«Грати» is on top")
+	var dark := m.get_node("Menu/Buttons/MachineGunTest") as Button
 	check(dark.theme_type_variation == &"DarkButton" and dark.get_theme_stylebox("normal") is StyleBoxTexture, "the others are dark (theme DarkButton)")
 	check((m.get_node("World/Background") as Sprite2D).texture != null, "menu background is set")
 	var world := m.get_node("World") as Node2D
@@ -81,7 +83,7 @@ func _process(_dt: float) -> bool:
 		5:
 			check(current_scene != null and current_scene.name == "MainMenu", "the game starts in the menu")
 			_check_menu()
-			check(not _press("Гра"), "no «Гра: карта map_03» in the menu")
+			check(not _press("Гра:"), "no «Гра: карта map_03» in the menu")
 			check(_press("Тест кулемета"), "menu has «Тест кулемета»")
 		20:
 			check(current_scene.name == "TurretSandbox", "«Тест кулемета» opens the test range")
@@ -100,6 +102,13 @@ func _process(_dt: float) -> bool:
 			check(_press("Меню"), "the range has «Меню»")
 		40:
 			check(current_scene.name == "MainMenu", "«Меню» goes back")
+			check(_press("Грати"), "menu has «Грати»")
+		60:
+			check(current_scene.name == "Main", "«Грати» opens the game (level 1)")
+			check(current_scene.has_node("Map03") and current_scene.has_node("GameHud") and Wallet.of(current_scene) != null, "the game has map_03, the crystal counter and a wallet")
+			check(_press("Меню"), "the game has «Меню»")
+		80:
+			check(current_scene.name == "MainMenu", "«Меню» from the game goes back")
 			print("menu: %d failed" % _failed)
 			quit(1 if _failed > 0 else 0)
 			return true

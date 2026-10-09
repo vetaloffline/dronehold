@@ -46,6 +46,40 @@ func occupies_cells() -> bool:
 	return true
 
 
+## Drawn mirrored left-right (a drill in a vein's left slot). Override.
+func get_map_flip() -> bool:
+	return false
+
+
+func _map_scale_vec() -> Vector2:
+	var s := get_map_scale()
+	return Vector2(-s if get_map_flip() else s, s)
+
+
+## Drone landing points: Marker2D children named DronePad* (set in the object's own scene, so every
+## object of the type has them), in the parent's (map) space. A mirrored object mirrors them too.
+func drone_pads() -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for c in get_children():
+		if c is Marker2D and String(c.name).begins_with("DronePad"):
+			out.append(transform * (c as Marker2D).position)
+	return out
+
+
+## Editor: a ring with a dot on every drone pad (call from _draw of objects that have pads).
+func draw_drone_pads() -> void:
+	if not Engine.is_editor_hint():
+		return
+	var k := 1.0 / maxf(0.001, absf(get_map_scale()))
+	for c in get_children():
+		if c is Marker2D and String(c.name).begins_with("DronePad"):
+			var p := (c as Marker2D).position
+			draw_set_transform(p, 0.0, Vector2(1.0, 0.75))
+			draw_arc(Vector2.ZERO, 14.0 * k, 0.0, TAU, 32, Color(0.4, 0.9, 1.0, 0.95), 3.0 * k, true)
+			draw_circle(Vector2.ZERO, 4.0 * k, Color(0.4, 0.9, 1.0, 0.95))
+			draw_set_transform(Vector2.ZERO)
+
+
 func ground_point_for(c: Vector2i) -> Vector2:
 	var f := get_footprint()
 	var sh := get_map_shift()
@@ -74,8 +108,7 @@ func _enter_tree() -> void:
 func _place() -> void:
 	if not is_inside_tree():
 		return
-	var s := get_map_scale()
-	scale = Vector2(s, s)
+	scale = _map_scale_vec()
 	position = ground_point_for(cell)
 	_placed_at = position
 
@@ -90,9 +123,8 @@ func editor_snap() -> void:
 			cell = c
 		else:
 			_place()
-	var s := get_map_scale()
-	if scale != Vector2(s, s):
-		scale = Vector2(s, s)
+	if scale != _map_scale_vec():
+		scale = _map_scale_vec()
 
 
 func _process(_dt: float) -> void:

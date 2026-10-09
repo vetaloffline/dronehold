@@ -9,6 +9,16 @@ extends MapObject
 ## Node origin = ground point; inside, everything is drill_body.png px minus the ground point.
 ## Draw order: body shadow, arm shadow (ground, z −1) → body → hot spot (standalone) → arm 3, 2, 1
 ## → beam, lens glow, sparks (ADD; z +1 in a vein slot so the vein does not cover them).
+## Mining (game only, in a vein slot): every time the beam goes out rig.crystals_per_cycle crystals go
+## into the drill's own storage (not the wallet — a drone carries them to a store) and «+N» floats up.
+## Full storage (rig.storage) — the drill waits with its arm up until a drone takes some.
+## Drone landing point: the DronePad marker in drill.tscn (drone_pads(); mirrored with the drill).
+
+signal mined(amount: int)
+signal stored_changed(amount: int)
+
+## «+N» starts this many map px above the beam's hit point.
+const POP_LIFT := 70.0
 
 @export var rig: DrillRig:
 	set(v):
@@ -33,6 +43,12 @@ var _beam_on := 0.0
 var _flick := 1.0
 ## Vein px → drill px (sizes of sparks / hot spot in a vein slot are in vein px).
 var _u := 1.0
+## Beams that went out so far (−1 = not counted yet: the first frame only takes the count).
+var _beams := -1
+## Crystals waiting in the drill for a drone.
+var stored := 0
+## Of `stored`, how many drones on their way have already promised to take (CargoDrone).
+var claimed := 0
 
 @onready var _body := $Body as Sprite2D
 @onready var _hot := $HotSpot as Node2D
@@ -58,6 +74,16 @@ func get_map_scale() -> float:
 	if vein and vein.rig:
 		return vein.get_map_scale() * vein.rig.drill_scale
 	return rig.map_scale if rig else 1.0
+
+
+## Mirrored in a vein's left slot (it fires to the right, at the vein).
+func get_map_flip() -> bool:
+	return vein != null and vein.rig != null and vein.drill_mirrored()
+
+
+## ±1: the drill's x axis on the map (−1 when mirrored).
+func _flip() -> float:
+	return -1.0 if get_map_flip() else 1.0
 
 
 func get_clear_radius() -> float:
@@ -86,7 +112,7 @@ func find_vein(c: Vector2i) -> CrystalVein:
 
 
 func _slot_point(v: CrystalVein) -> Vector2:
-	return v.vein_px_to_parent(v.rig.drill_offset + rig.ground_point * v.rig.drill_scale)
+	return v.vein_px_to_parent(v.drill_px_to_vein(rig.ground_point))
 
 
 func ground_point_for(c: Vector2i) -> Vector2:
@@ -131,6 +157,8 @@ func _apply_geometry() -> void:
 	var g := rig.ground_point
 	_body.offset = -g
 	($BodyShadow as Sprite2D).offset = -g
+	# Mirrored drill: the baked body shadow is flipped back, so it still falls left (sun upper right).
+	($BodyShadow as Sprite2D).scale.x = _flip()
 	_shoulder.position = rig.shoulder_on_body - g
 	_elbow.position = rig.seg1_end - rig.seg1_pivot
 	_wrist.position = rig.seg2_end - rig.seg2_pivot
@@ -149,8 +177,60 @@ func _process(dt: float) -> void:
 	var key := v.ground_point_for(v.cell) if v else Vector2.INF
 	if v != vein or key != _vein_key:
 		_place()
-	_t += dt
+	# Full: stop at the end of the cycle (arm up, waiting) until a drone takes crystals.
+	if not Engine.is_editor_hint() and is_full() and _t + dt >= _next_cycle_start():
+		_t = _next_cycle_start() - 0.0001
+	else:
+		_t += dt
 	_animate(minf(dt, 0.05))
+	if not Engine.is_editor_hint():
+		_count_beams()
+	else:
+		queue_redraw()  # drone pad ring follows the marker while it is dragged
+
+
+func _draw() -> void:
+	draw_drone_pads()
+
+
+func is_full() -> bool:
+	return vein != null and rig != null and stored >= rig.storage
+
+
+## Takes up to `n` crystals out of the storage (a drone loading). Returns how many it got.
+func take(n: int) -> int:
+	var k := clampi(n, 0, stored)
+	if k > 0:
+		stored -= k
+		stored_changed.emit(stored)
+	return k
+
+
+func _next_cycle_start() -> float:
+	var c := active_rig().cycle_len()
+	return (floor(_t / c) + 1.0) * c
+
+
+## One beam = one portion of crystals. Counted by the clock, so a long frame does not lose one.
+func _count_beams() -> void:
+	var b := active_rig().beams_done(_t)
+	if _beams < 0 or b < _beams:
+		_beams = b
+		return
+	if b == _beams:
+		return
+	var n := mini((b - _beams) * rig.crystals_per_cycle, rig.storage - stored)
+	_beams = b
+	if vein == null or n <= 0:
+		return
+	stored += n
+	mined.emit(n)
+	stored_changed.emit(stored)
+	# Starts over the top of the vein (the hit point is in the middle of the crystal).
+	var par := get_parent() as Node2D
+	if par:
+		var at := par.to_local(to_global(_hit - rig.ground_point)) - Vector2(0, POP_LIFT)
+		FloatText.pop(par, at, "+%d" % n, FloatText.CRYSTAL)
 
 
 ## Joints of the arm in body px for joint angles a1, a2, a3 (radians, a2/a3 relative).
@@ -217,7 +297,7 @@ func _animate(dt: float) -> void:
 	var el: float = ph[2]
 
 	if in_slot:
-		_hit = (vein.rig.hit_point - vein.rig.drill_offset) / vein.rig.drill_scale
+		_hit = vein.vein_px_to_drill(vein.drill_hit())
 		_u = 1.0 / vein.rig.drill_scale
 	else:
 		_u = 1.0
@@ -278,7 +358,7 @@ func _animate(dt: float) -> void:
 	for i in 4:
 		var gy: float = r.shoulder_ground.y + frac[i] * (tip_f.y - r.shoulder_ground.y)
 		var h := gy - J[i].y
-		SP.append(Vector2(J[i].x + r.shadow_tx * h, gy + r.shadow_ty * h))
+		SP.append(Vector2(J[i].x + r.shadow_tx * _flip() * h, gy + r.shadow_ty * h))
 	var at: Array[Vector2] = [R.s, R.elbow, R.wrist]
 	var ang := [R.A1, R.A2, R.A3]
 	var to_local := Transform2D(0.0, -g)

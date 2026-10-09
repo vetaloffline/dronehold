@@ -1,92 +1,120 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene format=3 uid="uid://b81v0ti0rba1x"]
 
-[ext_resource type="Script" path="res://game/objects/drill/drill.gd" id="1_drill"]
+[ext_resource type="Script" uid="uid://bt0afoqxcopfc" path="res://game/objects/drill/drill.gd" id="1_drill"]
 [ext_resource type="Resource" path="res://game/objects/drill/drill_rig.tres" id="2_rig"]
-[ext_resource type="Texture2D" path="res://art/objects/buildings/drill/drill_body_shadow.png" id="3_bshadow"]
-[ext_resource type="Texture2D" path="res://art/objects/buildings/drill/drill_body.png" id="4_body"]
-[ext_resource type="Texture2D" path="res://art/objects/buildings/drill/drill_arm_1.png" id="5_arm1"]
-[ext_resource type="Texture2D" path="res://art/objects/buildings/drill/drill_arm_2.png" id="6_arm2"]
-[ext_resource type="Texture2D" path="res://art/objects/buildings/drill/drill_arm_3.png" id="7_arm3"]
-[ext_resource type="Shader" path="res://game/objects/drill/drill_silhouette.gdshader" id="8_sil"]
+[ext_resource type="Texture2D" uid="uid://da4hrb05ayj" path="res://art/objects/buildings/drill/drill_body_shadow.png" id="3_bshadow"]
+[ext_resource type="Texture2D" uid="uid://b7oe23l4bquw8" path="res://art/objects/buildings/drill/drill_body.png" id="4_body"]
+[ext_resource type="Texture2D" uid="uid://cmoxsgqw0b3gt" path="res://art/objects/buildings/drill/drill_arm_1.png" id="5_arm1"]
+[ext_resource type="Texture2D" uid="uid://b77ebhjue7c2y" path="res://art/objects/buildings/drill/drill_arm_2.png" id="6_arm2"]
+[ext_resource type="Texture2D" uid="uid://mfanqnpelaew" path="res://art/objects/buildings/drill/drill_arm_3.png" id="7_arm3"]
+[ext_resource type="Shader" uid="uid://c5k8bujetrti0" path="res://game/objects/drill/drill_silhouette.gdshader" id="8_sil"]
+
+[sub_resource type="ShaderMaterial" id="Sil1"]
+shader = ExtResource("8_sil")
+shader_parameter/color = Color(0.011764706, 0.043137256, 0.101960786, 1)
+
+[sub_resource type="ShaderMaterial" id="Sil2"]
+shader = ExtResource("8_sil")
+shader_parameter/color = Color(0.011764706, 0.043137256, 0.101960786, 1)
+
+[sub_resource type="ShaderMaterial" id="Sil3"]
+shader = ExtResource("8_sil")
+shader_parameter/color = Color(0.011764706, 0.043137256, 0.101960786, 1)
 
 [sub_resource type="CanvasItemMaterial" id="Add"]
 blend_mode = 1
 
-[sub_resource type="ShaderMaterial" id="Sil1"]
-shader = ExtResource("8_sil")
-
-[sub_resource type="ShaderMaterial" id="Sil2"]
-shader = ExtResource("8_sil")
-
-[sub_resource type="ShaderMaterial" id="Sil3"]
-shader = ExtResource("8_sil")
-
-[node name="Drill" type="Node2D"]
+[node name="Drill" type="Node2D" unique_id=1198615486]
 texture_filter = 4
+position = Vector2(32, 48)
+scale = Vector2(0.1, 0.1)
 script = ExtResource("1_drill")
 rig = ExtResource("2_rig")
 
-[node name="BodyShadow" type="Sprite2D" parent="."]
+[node name="BodyShadow" type="Sprite2D" parent="." unique_id=67663491]
 z_index = -1
 texture = ExtResource("3_bshadow")
 centered = false
 offset = Vector2(-1078, -936)
 
-[node name="ArmShadow" type="CanvasGroup" parent="."]
+[node name="ArmShadow" type="CanvasGroup" parent="." unique_id=176325826]
 self_modulate = Color(1, 1, 1, 0.35)
 z_index = -1
 
-[node name="Seg1" type="Sprite2D" parent="ArmShadow"]
+[node name="Seg1" type="Sprite2D" parent="ArmShadow" unique_id=1271373679]
 material = SubResource("Sil1")
+position = Vector2(-214.5, -164.99998)
+rotation = 0.29017043
+scale = Vector2(1.0112224, 0.88182485)
+skew = 0.14472198
 texture = ExtResource("5_arm1")
 centered = false
 offset = Vector2(-615, -140)
 
-[node name="Seg2" type="Sprite2D" parent="ArmShadow"]
+[node name="Seg2" type="Sprite2D" parent="ArmShadow" unique_id=214926167]
 material = SubResource("Sil2")
+position = Vector2(-569.87445, -148.17285)
+rotation = 1.6844376
+scale = Vector2(0.7267342, 0.5703449)
+skew = -0.7346682
 texture = ExtResource("6_arm2")
 centered = false
 offset = Vector2(-450, -405)
 
-[node name="Seg3" type="Sprite2D" parent="ArmShadow"]
+[node name="Seg3" type="Sprite2D" parent="ArmShadow" unique_id=936401557]
 material = SubResource("Sil3")
+position = Vector2(-652.3341, -183.33441)
+rotation = 1.6980125
+scale = Vector2(0.7386178, 0.5560675)
+skew = -0.7187062
 texture = ExtResource("7_arm3")
 centered = false
 offset = Vector2(-308, -608)
 
-[node name="Body" type="Sprite2D" parent="."]
+[node name="Body" type="Sprite2D" parent="." unique_id=1530882689]
+position = Vector2(-0.17926364, 0.098559305)
 texture = ExtResource("4_body")
 centered = false
 offset = Vector2(-1078, -936)
 
-[node name="HotSpot" type="Node2D" parent="."]
+[node name="HotSpot" type="Node2D" parent="." unique_id=1764118752]
 material = SubResource("Add")
 
-[node name="Arms" type="Node2D" parent="."]
+[node name="Arms" type="Node2D" parent="." unique_id=2065703246]
+position = Vector2(-0.59754544, 0.328531)
 
-[node name="Shoulder" type="Node2D" parent="Arms"]
+[node name="Shoulder" type="Node2D" parent="Arms" unique_id=942712461]
 position = Vector2(-78, -711)
+rotation = 0.54105204
 
-[node name="Elbow" type="Node2D" parent="Arms/Shoulder"]
+[node name="Elbow" type="Node2D" parent="Arms/Shoulder" unique_id=485847271]
 position = Vector2(-315, 135)
+rotation = -0.54105204
 
-[node name="Wrist" type="Node2D" parent="Arms/Shoulder/Elbow"]
+[node name="Wrist" type="Node2D" parent="Arms/Shoulder/Elbow" unique_id=94956413]
 position = Vector2(-142, 203)
+rotation = 0.033104263
 
-[node name="Arm3" type="Sprite2D" parent="Arms/Shoulder/Elbow/Wrist"]
+[node name="Arm3" type="Sprite2D" parent="Arms/Shoulder/Elbow/Wrist" unique_id=759406699]
 texture = ExtResource("7_arm3")
 centered = false
 offset = Vector2(-308, -608)
 
-[node name="Arm2" type="Sprite2D" parent="Arms/Shoulder/Elbow"]
+[node name="Arm2" type="Sprite2D" parent="Arms/Shoulder/Elbow" unique_id=851656732]
 texture = ExtResource("6_arm2")
 centered = false
 offset = Vector2(-450, -405)
 
-[node name="Arm1" type="Sprite2D" parent="Arms/Shoulder"]
+[node name="Arm1" type="Sprite2D" parent="Arms/Shoulder" unique_id=456626816]
 texture = ExtResource("5_arm1")
 centered = false
 offset = Vector2(-615, -140)
 
-[node name="Fx" type="Node2D" parent="."]
+[node name="Fx" type="Node2D" parent="." unique_id=765745210]
 material = SubResource("Add")
+
+[node name="DronePad2" type="Marker2D" parent="." unique_id=1429412874]
+position = Vector2(-9.999939, 340)
+
+[node name="DronePad3" type="Marker2D" parent="." unique_id=666360744]
+position = Vector2(6.1035156e-05, -919.99994)

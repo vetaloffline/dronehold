@@ -1,0 +1,348 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://game/ui/object_info.gd" id="1_info"]
+[ext_resource type="Theme" path="res://game/ui/menu_theme.tres" id="2_theme"]
+[ext_resource type="Script" path="res://game/ui/object_portrait.gd" id="3_portrait"]
+[ext_resource type="Script" path="res://game/ui/stat_icon.gd" id="4_icon"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
+bg_color = Color(0.035, 0.06, 0.1, 0.93)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.33, 0.82, 1, 0.9)
+corner_radius_top_left = 26
+corner_radius_top_right = 26
+corner_radius_bottom_right = 26
+corner_radius_bottom_left = 26
+corner_detail = 1
+shadow_color = Color(0, 0, 0, 0.4)
+shadow_size = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_portrait"]
+bg_color = Color(0.02, 0.04, 0.08, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.33, 0.82, 1, 0.75)
+corner_radius_top_left = 30
+corner_radius_top_right = 30
+corner_radius_bottom_right = 30
+corner_radius_bottom_left = 30
+corner_detail = 1
+shadow_color = Color(0.2, 0.7, 1, 0.25)
+shadow_size = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_stat"]
+content_margin_top = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0.05, 0.08, 0.13, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.55, 0.66, 0.78, 0.55)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_close"]
+bg_color = Color(0.035, 0.06, 0.1, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.33, 0.82, 1, 0.9)
+corner_radius_top_left = 30
+corner_radius_top_right = 30
+corner_radius_bottom_right = 30
+corner_radius_bottom_left = 30
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_close_hover"]
+bg_color = Color(0.09, 0.16, 0.24, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.55, 0.92, 1, 1)
+corner_radius_top_left = 30
+corner_radius_top_right = 30
+corner_radius_bottom_right = 30
+corner_radius_bottom_left = 30
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_focus"]
+
+[node name="ObjectInfo" type="CanvasLayer"]
+layer = 6
+script = ExtResource("1_info")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("2_theme")
+
+[node name="Card" type="Control" parent="Root"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -410.0
+offset_top = -324.0
+offset_right = 410.0
+offset_bottom = -24.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="Body" type="Control" parent="Root/Card"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Bg" type="Panel" parent="Root/Card/Body"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="Content" type="MarginContainer" parent="Root/Card/Body"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 22
+theme_override_constants/margin_bottom = 18
+
+[node name="Row" type="HBoxContainer" parent="Root/Card/Body/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 28
+
+[node name="Portrait" type="Panel" parent="Root/Card/Body/Content/Row"]
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_portrait")
+
+[node name="Picture" type="Control" parent="Root/Card/Body/Content/Row/Portrait"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 6.0
+offset_right = -8.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("3_portrait")
+
+[node name="Info" type="VBoxContainer" parent="Root/Card/Body/Content/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Name" type="Label" parent="Root/Card/Body/Content/Row/Info"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.6)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 46
+text = "Кулемет"
+
+[node name="Level" type="Label" parent="Root/Card/Body/Content/Row/Info"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.98, 0.78, 0.3, 1)
+theme_override_font_sizes/font_size = 28
+text = "Рівень 1"
+
+[node name="Gap" type="Control" parent="Root/Card/Body/Content/Row/Info"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Stats" type="HBoxContainer" parent="Root/Card/Body/Content/Row/Info"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_constants/separation = 14
+
+[node name="Stat1" type="PanelContainer" parent="Root/Card/Body/Content/Row/Info/Stats"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_stat")
+
+[node name="Box" type="VBoxContainer" parent="Root/Card/Body/Content/Row/Info/Stats/Stat1"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="Icon" type="Control" parent="Root/Card/Body/Content/Row/Info/Stats/Stat1/Box"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("4_icon")
+
+[node name="Value" type="Label" parent="Root/Card/Body/Content/Row/Info/Stats/Stat1/Box"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 40
+text = "10"
+horizontal_alignment = 1
+
+[node name="Caption" type="Label" parent="Root/Card/Body/Content/Row/Info/Stats/Stat1/Box"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.8, 0.9, 1)
+theme_override_font_sizes/font_size = 22
+text = "Урон"
+horizontal_alignment = 1
+
+[node name="Stat2" type="PanelContainer" parent="Root/Card/Body/Content/Row/Info/Stats"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_stat")
+
+[node name="Box" type="VBoxContainer" parent="Root/Card/Body/Content/Row/Info/Stats/Stat2"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="Icon" type="Control" parent="Root/Card/Body/Content/Row/Info/Stats/Stat2/Box"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("4_icon")
+kind = 1
+
+[node name="Value" type="Label" parent="Root/Card/Body/Content/Row/Info/Stats/Stat2/Box"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 40
+text = "12/с"
+horizontal_alignment = 1
+
+[node name="Caption" type="Label" parent="Root/Card/Body/Content/Row/Info/Stats/Stat2/Box"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.8, 0.9, 1)
+theme_override_font_sizes/font_size = 22
+text = "Темп"
+horizontal_alignment = 1
+
+[node name="Stat3" type="PanelContainer" parent="Root/Card/Body/Content/Row/Info/Stats"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_stat")
+
+[node name="Box" type="VBoxContainer" parent="Root/Card/Body/Content/Row/Info/Stats/Stat3"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="Icon" type="Control" parent="Root/Card/Body/Content/Row/Info/Stats/Stat3/Box"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("4_icon")
+kind = 2
+
+[node name="Value" type="Label" parent="Root/Card/Body/Content/Row/Info/Stats/Stat3/Box"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 40
+text = "21"
+horizontal_alignment = 1
+
+[node name="Caption" type="Label" parent="Root/Card/Body/Content/Row/Info/Stats/Stat3/Box"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.8, 0.9, 1)
+theme_override_font_sizes/font_size = 22
+text = "Дальність"
+horizontal_alignment = 1
+
+[node name="Stat4" type="PanelContainer" parent="Root/Card/Body/Content/Row/Info/Stats"]
+visible = false
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_stat")
+
+[node name="Box" type="VBoxContainer" parent="Root/Card/Body/Content/Row/Info/Stats/Stat4"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="Icon" type="Control" parent="Root/Card/Body/Content/Row/Info/Stats/Stat4/Box"]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("4_icon")
+kind = 3
+
+[node name="Value" type="Label" parent="Root/Card/Body/Content/Row/Info/Stats/Stat4/Box"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 40
+text = "4"
+horizontal_alignment = 1
+
+[node name="Caption" type="Label" parent="Root/Card/Body/Content/Row/Info/Stats/Stat4/Box"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.8, 0.9, 1)
+theme_override_font_sizes/font_size = 22
+text = "Вибух"
+horizontal_alignment = 1
+
+[node name="Close" type="Button" parent="Root/Card/Body"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -40.0
+offset_top = -24.0
+offset_right = 20.0
+offset_bottom = 36.0
+grow_horizontal = 0
+focus_mode = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 30
+theme_override_styles/focus = SubResource("StyleBoxEmpty_focus")
+theme_override_styles/hover = SubResource("StyleBoxFlat_close_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_close_hover")
+theme_override_styles/normal = SubResource("StyleBoxFlat_close")
+text = "✕"

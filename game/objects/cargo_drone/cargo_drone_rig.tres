@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CargoDroneRig" load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://game/objects/cargo_drone/cargo_drone_rig.gd" id="1_rig"]
+[ext_resource type="Texture2D" path="res://art/objects/units/drone/drone_000.png" id="2_v000"]
+[ext_resource type="Texture2D" path="res://art/objects/units/drone/drone_045.png" id="3_v045"]
+[ext_resource type="Texture2D" path="res://art/objects/units/drone/drone_090.png" id="4_v090"]
+[ext_resource type="Texture2D" path="res://art/objects/units/drone/drone_135.png" id="5_v135"]
+[ext_resource type="Texture2D" path="res://art/objects/units/drone/drone_180.png" id="6_v180"]
+[ext_resource type="Texture2D" path="res://art/objects/units/drone/drone_225.png" id="7_v225"]
+[ext_resource type="Texture2D" path="res://art/objects/units/drone/drone_270.png" id="8_v270"]
+[ext_resource type="Texture2D" path="res://art/objects/units/drone/drone_315.png" id="9_v315"]
+
+[resource]
+script = ExtResource("1_rig")
+views = Array[Texture2D]([ExtResource("2_v000"), ExtResource("3_v045"), ExtResource("4_v090"), ExtResource("5_v135"), ExtResource("6_v180"), ExtResource("7_v225"), ExtResource("8_v270"), ExtResource("9_v315")])

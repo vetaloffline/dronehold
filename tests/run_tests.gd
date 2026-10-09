@@ -18,6 +18,11 @@ func _init() -> void:
 	_test_crowd_spacing()
 	_test_crowd_gets_through()
 	_test_multimesh_buffer_layout()
+	_test_wallet()
+	_test_drill_beams()
+	_test_bullet_pierce()
+	_test_grenade_blast()
+	_test_drone_nav()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	quit(1 if _failed > 0 else 0)
 
@@ -39,6 +44,15 @@ func _test_grid_from_layout() -> void:
 	check(g.count_kind(MapGrid.Kind.ROCK) == 4968, "rock cells 4968, got %d" % g.count_kind(MapGrid.Kind.ROCK))
 	check(g.blocked_count() == 4968, "slimes can not walk the rock cells, got %d" % g.blocked_count())
 	check(g.count_kind(MapGrid.Kind.GROUND) == g.cols * g.rows - 4968, "the rest is ground")
+	# Drone layer from the same layout: cliffs only (pits are flown over), so a part of the rock cells.
+	var nf := MapGrid.cliffs_from_layout(tex.get_image(), g.cols, g.rows, 0.5)
+	var cliff := nf.count(1)
+	var outside := 0
+	for i in nf.size():
+		if nf[i] == 1 and g.kinds[i] != MapGrid.Kind.ROCK:
+			outside += 1
+	check(cliff > 0 and cliff < 4968, "no-fly cells = cliffs: %d of 4968 rock cells" % cliff)
+	check(outside == 0, "every no-fly cell is a rock cell (%d are not)" % outside)
 
 
 func _small_grid(cols: int, rows: int, walls: Array) -> MapGrid:
@@ -298,3 +312,105 @@ func _test_multimesh_buffer_layout() -> void:
 	for k in mini(12, buf.size()):
 		ok = ok and is_equal_approx(buf[k], want[k])
 	check(ok, "buffer layout [x.x y.x 0 o.x  x.y y.y 0 o.y  custom]")
+
+
+func _test_wallet() -> void:
+	var w := Wallet.new()
+	check(w.amount("crystal") == 200, "wallet starts with 200 crystals, got %d" % w.amount("crystal"))
+	var seen := []
+	w.changed.connect(func(res: String, amount: int, delta: int) -> void: seen.append([res, amount, delta]))
+	w.add("crystal", 5)
+	check(w.amount("crystal") == 205 and seen == [["crystal", 205, 5]], "add 5 → 205 and one signal, got %s" % [seen])
+	check(not w.pay({"crystal": 300}) and w.amount("crystal") == 205, "too expensive: nothing taken")
+	check(not w.pay({"crystal": 10, "essence": 1}) and w.amount("crystal") == 205, "missing second resource: nothing taken")
+	check(w.pay({"crystal": 105}) and w.amount("crystal") == 100, "pay 105 → 100")
+	w.free()
+
+
+func _test_drill_beams() -> void:
+	# Beam goes out at lower + charge + fire = 0.5 + 0.6 + 2.5 = 3.6 s, cycle 5.6 s.
+	var r := DrillRig.new()
+	check(is_equal_approx(r.fire_end(), 3.6) and is_equal_approx(r.cycle_len(), 5.6), "drill timing 3.6 / 5.6 s")
+	check(r.beams_done(0.0) == 0 and r.beams_done(3.59) == 0, "no crystals before the first beam ends")
+	check(r.beams_done(3.61) == 1 and r.beams_done(9.19) == 1 and r.beams_done(9.21) == 2, "one portion per cycle")
+	check(r.beams_done(3.61 + 5.6 * 10) == 11, "a long frame does not lose portions")
+	check(r.crystals_per_cycle == 5, "5 crystals a cycle")
+
+
+func _test_bullet_pierce() -> void:
+	# docs/concept.md «Пробиття»: bullet 10, slimes 3 → 3 → 3 → 40 in a row: three die (10 → 7 → 4 → 1),
+	# the big one gets 1 and keeps 39.
+	var s := SwarmSim.new()
+	s.setup(32, 20, 10)
+	var row := []
+	for k in 3:
+		row.append(s.spawn(Vector2(100 + 40 * k, 100), 1.0, 3.0, 0.0, 0.0))
+	var big := s.spawn(Vector2(220, 103), 1.0, 40.0, 0.0, 0.0)
+	var aside := s.spawn(Vector2(140, 140), 1.0, 3.0, 0.0, 0.0)  # 40 px off the line: not hit
+	s.bin()
+	var left := s.hit_with_pool(row[0], 10.0)
+	check(is_equal_approx(left, 7.0) and not s.alive(row[0]), "first slime dies, 7 left")
+	var res := s.pierce(Vector2(100, 100), Vector2.RIGHT, 400.0, left, 10.0, 8, row[0])
+	check(not s.alive(row[1]) and not s.alive(row[2]), "the bullet flies on and kills the next two")
+	check(s.alive(big) and is_equal_approx(s.hp_of(big), 39.0), "the big one gets the last 1 (hp %.1f)" % s.hp_of(big))
+	check(s.alive(aside), "a slime off the line is not hit")
+	check(res.kills == 2 and is_equal_approx(float(res.left), 0.0) and is_equal_approx(float(res.stop), 120.0), "stops in the big one: %s" % [res])
+	# Pool bigger than everything on the line: flies to the end of the range.
+	var s2 := SwarmSim.new()
+	s2.setup(8, 20, 10)
+	var one := s2.spawn(Vector2(150, 100), 1.0, 3.0, 0.0, 0.0)
+	s2.bin()
+	var r2 := s2.pierce(Vector2(100, 100), Vector2.RIGHT, 300.0, 10.0, 10.0, 8)
+	check(not s2.alive(one) and is_equal_approx(float(r2.stop), 300.0) and is_equal_approx(float(r2.left), 7.0), "nothing more on the line: flies to the end with 7")
+
+
+func _test_grenade_blast() -> void:
+	# Core 28 px: 20 damage; ring to 128 px: 2 → 1.5 (wounds a 3 hp slime, two blasts kill it).
+	var s := SwarmSim.new()
+	s.setup(16, 20, 20)
+	var centre := s.spawn(Vector2(200, 200), 1.0, 3.0, 0.0, 0.0)
+	var near := s.spawn(Vector2(220, 210), 1.0, 3.0, 0.0, 0.0)  # 22 px: core
+	var ring := s.spawn(Vector2(280, 200), 1.0, 3.0, 0.0, 0.0)  # 80 px: ring
+	var out := s.spawn(Vector2(340, 200), 1.0, 3.0, 0.0, 0.0)  # 140 px: outside
+	var big := s.spawn(Vector2(205, 195), 1.0, 40.0, 0.0, 0.0)
+	s.bin()
+	var killed := s.damage_blast(Vector2(200, 200), 28.0, 20.0, 128.0, 2.0, 1.5)
+	check(killed == 2 and not s.alive(centre) and not s.alive(near), "the core kills (got %d)" % killed)
+	check(s.alive(ring) and s.hp_of(ring) > 1.0 and s.hp_of(ring) < 1.5, "the ring only wounds (hp %.2f)" % s.hp_of(ring))
+	check(s.alive(out) and is_equal_approx(s.hp_of(out), 3.0), "outside the blast: untouched")
+	check(s.alive(big) and is_equal_approx(s.hp_of(big), 20.0), "big slime (40) survives one blast with 20")
+	s.bin()
+	s.damage_blast(Vector2(200, 200), 28.0, 20.0, 128.0, 2.0, 1.5)
+	check(not s.alive(ring) and not s.alive(big), "the second blast finishes the wounded and the big one")
+
+
+func _test_drone_nav() -> void:
+	# A purple (no-fly) wall across the map with a 2-cell gap: the drone goes through the gap.
+	var g := MapGrid.open(30, 10)
+	for r in 10:
+		if r != 4 and r != 5:
+			g.set_no_fly(15, r, true)
+	var nav := DroneNav.build(g)
+	var a := g.cell_center(Vector2i(2, 1))
+	var b := g.cell_center(Vector2i(28, 1))
+	check(not nav.clear(a, b), "straight line crosses the no-fly wall")
+	var path := nav.path(a, b)
+	var ok := path.size() >= 2 and path[path.size() - 1] == b
+	var prev := a
+	var through_gap := false
+	for p in path:
+		ok = ok and nav.clear(prev, p)
+		var c := g.cell_at(p)
+		through_gap = through_gap or (c.x >= 14 and c.x <= 16 and (c.y == 4 or c.y == 5))
+		prev = p
+	check(ok, "every leg of the route is clear of no-fly cells (%d points)" % path.size())
+	check(through_gap, "the route goes through the gap in the wall")
+	check(path.size() <= 4, "straightened: few turns, not cell by cell (%d points)" % path.size())
+	# Tall decor cells block too (extra), and a closed wall means: fly straight.
+	var nav2 := DroneNav.build(g, [Vector2i(15, 4), Vector2i(15, 5)])
+	check(nav2.path(a, b) == PackedVector2Array([b]), "no way round → straight to the goal")
+	check(nav.path(a, g.cell_center(Vector2i(10, 1))) == PackedVector2Array([g.cell_center(Vector2i(10, 1))]), "nothing in the way → one straight leg")
+	# Pits are flown over: a pit cell is ROCK for slimes but not no-fly.
+	var g2 := MapGrid.open(10, 3)
+	g2.set_kind(5, 1, MapGrid.Kind.ROCK)
+	check(not g2.fly_blocked(5, 1) and DroneNav.build(g2).clear(g2.cell_center(Vector2i(1, 1)), g2.cell_center(Vector2i(8, 1))), "a rock cell that is not no-fly does not stop the drone")

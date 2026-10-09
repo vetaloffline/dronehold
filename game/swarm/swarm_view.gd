@@ -74,6 +74,7 @@ func free_nodes() -> void:
 	_shadow.clear()
 	_buf.clear()
 	_sbuf.clear()
+	bands = 0  # update() draws nothing until setup() builds the bands again
 
 
 func refresh_material(rig: SlimeRig) -> void:

@@ -5,13 +5,15 @@ extends CanvasLayer
 @export var swarm: Swarm
 ## Buttons that change the crowd size (off in the turret test range: they would cull its slimes).
 @export var show_count_buttons := true
+## Top left corner of the debug block (in the game it sits under the crystal counter).
+@export var origin := Vector2(16, 16)
 
 var _label: Label
 
 
 func _ready() -> void:
 	var box := VBoxContainer.new()
-	box.position = Vector2(16, 16)
+	box.position = origin
 	add_child(box)
 	_label = Label.new()
 	_label.add_theme_font_size_override("font_size", 28)

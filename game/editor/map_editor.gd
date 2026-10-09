@@ -2,9 +2,11 @@ class_name MapEditor
 extends Node2D
 ## Map editor (development tool, removed for release): paint cell kinds — ground / pass / rock /
 ## plateau — over the map and save them into the map's grid file (map_NN_grid.tres).
+## Second layer («Дрон» mode): where cargo drones do not fly (purple), saved in the same file.
 ##   PC: left — paint, right / middle drag — camera, wheel — zoom.
 ##   Phone: one finger — paint, two fingers — move / zoom.
-##   Keys: 1–4 kind, [ ] brush size, R brush / rectangle, Ctrl+Z undo, Ctrl+S save.
+##   Keys: 1–4 kind (in «Дрон»: 1 — не літати, 2 — літати), D cells / drone, [ ] brush size,
+##   R brush / rectangle, Ctrl+Z undo, Ctrl+S save.
 ## Slimes keep crawling, so you see at once how they go around what you paint.
 ## Saving works when the game runs from Godot (res:// is read-only in an exported build).
 
@@ -22,6 +24,10 @@ const KIND_SWATCH := {
 	MapGrid.Kind.ROCK: Color(1, 0.25, 0.25),
 	MapGrid.Kind.PLATEAU: Color(0.3, 0.55, 1),
 }
+## Drone layer brushes: no-fly (purple) / fly (clears it).
+const FLY_SWATCH := {true: Color(0.62, 0.22, 1.0), false: Color(0.35, 0.8, 0.35)}
+const FLY_LABELS := {true: "Не літати — дрон облітає", false: "Літати — дрон пролітає"}
+enum Layer { CELLS, DRONE }
 const SIZES := [1, 2, 3, 5, 8]
 const UNDO_MAX := 100
 const SLIMES_ON := 50
@@ -31,16 +37,21 @@ const SLIMES_ON := 50
 @onready var _camera := $Camera as MapCamera
 
 var kind: MapGrid.Kind = MapGrid.Kind.PASS
+## Which layer the brush paints: cell kinds or the drone no-fly layer.
+var layer := Layer.CELLS
+## Drone layer brush: true paints no-fly, false clears it.
+var no_fly := true
 var brush := 2
 var rect_tool := false
 var dirty := false
 
-var _stroke := {}            ## cell index → kind before this stroke
+var _stroke := {}            ## cell index → value before this stroke (kind or no-fly 0/1)
 var _painting := false
 var _last_cell := Vector2i(-9999, -9999)
 var _rect_from := Vector2i.ZERO
-var _undo: Array[Dictionary] = []
+var _undo: Array[Dictionary] = []  ## {"layer": Layer, "cells": {index: old value}}
 var _saved := PackedByteArray()   ## kinds on disk (to revert when leaving without saving)
+var _saved_fly := PackedByteArray()  ## drone layer on disk
 var _hover := Vector2i(-1, -1)
 var _touches := {}
 var _leave_armed := false
@@ -49,6 +60,10 @@ var _message := ""
 var _cursor: Node2D
 var _info: Label
 var _kind_buttons := {}
+var _fly_buttons := {}
+var _layer_buttons := {}
+var _kinds_box: Control
+var _fly_box: Control
 var _size_buttons := {}
 var _tool_button: Button
 var _slimes_button: Button
@@ -57,6 +72,7 @@ var _grid_button: Button
 
 func _ready() -> void:
 	_saved = _map.grid.kinds.duplicate()
+	_saved_fly = _map.grid.no_fly.duplicate()
 	var ov := _map.get_node_or_null("Overlay") as CanvasItem
 	if ov:
 		ov.visible = true
@@ -92,9 +108,18 @@ func brush_cells(c: Vector2i) -> Array[Vector2i]:
 
 func paint_cell(c: Vector2i) -> void:
 	var g := _map.grid
-	if not g.inside(c.x, c.y) or g.kind(c.x, c.y) == kind:
+	if not g.inside(c.x, c.y):
 		return
 	var i := c.y * g.cols + c.x
+	if layer == Layer.DRONE:
+		if g.fly_blocked(c.x, c.y) == no_fly:
+			return
+		if not _stroke.has(i):
+			_stroke[i] = 1 if g.fly_blocked(c.x, c.y) else 0
+		g.set_no_fly(c.x, c.y, no_fly)
+		return
+	if g.kind(c.x, c.y) == kind:
+		return
 	if not _stroke.has(i):
 		_stroke[i] = g.kinds[i]
 	g.set_kind(c.x, c.y, kind)
@@ -139,7 +164,7 @@ func end_stroke() -> void:
 		_map.refresh_overlay()
 	if _stroke.is_empty():
 		return
-	_undo.append(_stroke)
+	_undo.append({"layer": layer, "cells": _stroke})
 	if _undo.size() > UNDO_MAX:
 		_undo.pop_front()
 	_stroke = {}
@@ -149,7 +174,7 @@ func end_stroke() -> void:
 ## Second finger came down: this was a camera gesture, not painting — take the dab back.
 func cancel_stroke() -> void:
 	_painting = false
-	_revert(_stroke)
+	_revert({"layer": layer, "cells": _stroke})
 	_stroke = {}
 	_map.refresh_overlay()
 
@@ -165,13 +190,17 @@ func undo() -> void:
 
 func _revert(stroke: Dictionary) -> void:
 	var g := _map.grid
-	for i in stroke:
-		g.set_kind(i % g.cols, i / g.cols, stroke[i])
+	var cells: Dictionary = stroke.cells
+	for i in cells:
+		if stroke.layer == Layer.DRONE:
+			g.set_no_fly(i % g.cols, i / g.cols, cells[i] == 1)
+		else:
+			g.set_kind(i % g.cols, i / g.cols, cells[i])
 
 
 ## After a stroke / undo: slimes take the new paths, and the ones now inside a wall are removed.
 func _changed() -> void:
-	dirty = _map.grid.kinds != _saved
+	dirty = _map.grid.kinds != _saved or _map.grid.no_fly != _saved_fly
 	_leave_armed = false
 	_map.refresh_overlay()
 	_map.map_changed.emit()
@@ -189,6 +218,7 @@ func save() -> void:
 	var err := ResourceSaver.save(g, g.resource_path)
 	if err == OK:
 		_saved = g.kinds.duplicate()
+		_saved_fly = g.no_fly.duplicate()
 		dirty = false
 		_message = "Збережено: %s" % g.resource_path
 	else:
@@ -205,6 +235,7 @@ func _leave() -> void:
 	if dirty:
 		# The grid resource is shared with the game scene: put back what is on disk.
 		_map.grid.kinds = _saved.duplicate()
+		_map.grid.no_fly = _saved_fly.duplicate()
 		_map.grid.refresh()
 	get_tree().change_scene_to_file(MainMenu.MENU)
 
@@ -248,6 +279,10 @@ func _key(k: InputEventKey) -> void:
 		undo()
 	elif ctrl and k.keycode == KEY_S:
 		save()
+	elif k.keycode == KEY_D:
+		set_layer(Layer.CELLS if layer == Layer.DRONE else Layer.DRONE)
+	elif layer == Layer.DRONE and (k.keycode == KEY_1 or k.keycode == KEY_2):
+		set_no_fly(k.keycode == KEY_1)
 	elif k.keycode >= KEY_1 and k.keycode <= KEY_4:
 		set_kind(KIND_ORDER[k.keycode - KEY_1])
 	elif k.keycode == KEY_BRACKETLEFT:
@@ -260,6 +295,20 @@ func _key(k: InputEventKey) -> void:
 
 func set_kind(k: MapGrid.Kind) -> void:
 	kind = k
+	_refresh_ui()
+
+
+## «Клітинки» — cell kinds (slimes / building), «Дрон» — where drones do not fly.
+func set_layer(l: Layer) -> void:
+	layer = l
+	_map.show_blocked = l == Layer.CELLS
+	_map.show_no_fly = l == Layer.DRONE
+	_map.refresh_overlay()
+	_refresh_ui()
+
+
+func set_no_fly(on: bool) -> void:
+	no_fly = on
 	_refresh_ui()
 
 
@@ -276,7 +325,7 @@ func set_rect_tool(on: bool) -> void:
 # ---- drawing ----------------------------------------------------------------------------------
 
 func _draw_cursor() -> void:
-	var col := KIND_SWATCH[kind] as Color
+	var col := (FLY_SWATCH[no_fly] if layer == Layer.DRONE else KIND_SWATCH[kind]) as Color
 	if _painting and rect_tool:
 		var a := Vector2i(mini(_rect_from.x, _last_cell.x), mini(_rect_from.y, _last_cell.y))
 		var b := Vector2i(maxi(_rect_from.x, _last_cell.x), maxi(_rect_from.y, _last_cell.y))
@@ -309,6 +358,19 @@ func _build_ui() -> void:
 	top.add_child(_button("Меню", _leave))
 	top.add_child(_button("Зберегти", save))
 	top.add_child(_button("Скасувати", undo))
+	var layers := HBoxContainer.new()
+	box.add_child(layers)
+	var layer_group := ButtonGroup.new()
+	for spec in [[Layer.CELLS, "Клітинки"], [Layer.DRONE, "Дрон"]]:
+		var lb := _button(spec[1], set_layer.bind(spec[0]))
+		lb.toggle_mode = true
+		lb.button_group = layer_group
+		lb.custom_minimum_size.x = 150
+		layers.add_child(lb)
+		_layer_buttons[spec[0]] = lb
+	var kbox := VBoxContainer.new()
+	box.add_child(kbox)
+	_kinds_box = kbox
 	var kinds := ButtonGroup.new()
 	for k in KIND_ORDER:
 		var b := _button(KIND_LABELS[k], set_kind.bind(k))
@@ -316,8 +378,20 @@ func _build_ui() -> void:
 		b.button_group = kinds
 		b.icon = _swatch(KIND_SWATCH[k])
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		box.add_child(b)
+		kbox.add_child(b)
 		_kind_buttons[k] = b
+	var fbox := VBoxContainer.new()
+	box.add_child(fbox)
+	_fly_box = fbox
+	var fly_group := ButtonGroup.new()
+	for on in [true, false]:
+		var fb := _button(FLY_LABELS[on], set_no_fly.bind(on))
+		fb.toggle_mode = true
+		fb.button_group = fly_group
+		fb.icon = _swatch(FLY_SWATCH[on])
+		fb.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		fbox.add_child(fb)
+		_fly_buttons[on] = fb
 	var sizes := HBoxContainer.new()
 	box.add_child(sizes)
 	var size_group := ButtonGroup.new()
@@ -382,6 +456,10 @@ func _refresh_ui() -> void:
 	if _info == null:
 		return
 	(_kind_buttons[kind] as Button).set_pressed_no_signal(true)
+	(_fly_buttons[no_fly] as Button).set_pressed_no_signal(true)
+	(_layer_buttons[layer] as Button).set_pressed_no_signal(true)
+	_kinds_box.visible = layer == Layer.CELLS
+	_fly_box.visible = layer == Layer.DRONE
 	(_size_buttons[brush] as Button).set_pressed_no_signal(true)
 	_tool_button.text = "Інструмент: прямокутник" if rect_tool else "Інструмент: пензель %d×%d" % [brush, brush]
 	_grid_button.text = "Сітка: є" if _map.show_grid else "Сітка: нема"
@@ -389,14 +467,15 @@ func _refresh_ui() -> void:
 	var g := _map.grid
 	var hover := ""
 	if g.inside(_hover.x, _hover.y):
-		hover = "клітинка %d, %d — %s\n" % [_hover.x, _hover.y, GameMap.KIND_NAMES[g.kind(_hover.x, _hover.y)]]
+		hover = "клітинка %d, %d — %s%s\n" % [_hover.x, _hover.y, GameMap.KIND_NAMES[g.kind(_hover.x, _hover.y)],
+			", дрон не літає" if g.fly_blocked(_hover.x, _hover.y) else ""]
 	var bad := 0
 	for o in _map.objects():
 		if _map.placement_problem(o) != "":
 			bad += 1
-	_info.text = "%sземля %d · прохід %d · скеля %d · плато %d\n%s%s%s" % [
+	_info.text = "%sземля %d · прохід %d · скеля %d · плато %d · дрон не літає %d\n%s%s%s" % [
 		hover, g.count_kind(MapGrid.Kind.GROUND), g.count_kind(MapGrid.Kind.PASS),
-		g.count_kind(MapGrid.Kind.ROCK), g.count_kind(MapGrid.Kind.PLATEAU),
+		g.count_kind(MapGrid.Kind.ROCK), g.count_kind(MapGrid.Kind.PLATEAU), g.no_fly_count(),
 		"● не збережено\n" if dirty else "",
 		"Об'єктів не на місці: %d (червона рамка)\n" % bad if bad > 0 else "",
 		_message]
