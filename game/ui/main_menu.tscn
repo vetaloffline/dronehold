@@ -1,10 +1,173 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://game/ui/main_menu.gd" id="1_menu"]
+[ext_resource type="Theme" path="res://game/ui/menu_theme.tres" id="2_theme"]
+[ext_resource type="Texture2D" path="res://art/objects/ui/main_menu/menu_bg.webp" id="3_bg"]
+[ext_resource type="Script" path="res://game/objects/menu_drone/menu_drone.gd" id="4_drone"]
+[ext_resource type="Texture2D" path="res://art/objects/ui/main_menu/logo.png" id="5_logo"]
+[ext_resource type="Texture2D" path="res://art/objects/ui/main_menu/sound_on.png" id="6_on"]
+[ext_resource type="Texture2D" path="res://art/objects/ui/main_menu/sound_off.png" id="7_off"]
+
+[sub_resource type="Gradient" id="Gradient_shade"]
+offsets = PackedFloat32Array(0, 0.38, 0.6)
+colors = PackedColorArray(0.04, 0.024, 0.063, 0.75, 0.04, 0.024, 0.063, 0.35, 0.04, 0.024, 0.063, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_shade"]
+gradient = SubResource("Gradient_shade")
+width = 256
+height = 4
 
 [node name="MainMenu" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
 script = ExtResource("1_menu")
+
+[node name="World" type="Node2D" parent="."]
+scale = Vector2(1.1483, 1.1483)
+
+[node name="Background" type="Sprite2D" parent="World"]
+texture = ExtResource("3_bg")
+centered = false
+
+[node name="Drones" type="Node2D" parent="World"]
+
+[node name="Drone1" type="Node2D" parent="World/Drones"]
+script = ExtResource("4_drone")
+speed = 110.0
+sit = 2.5
+
+[node name="Point1" type="Marker2D" parent="World/Drones/Drone1"]
+position = Vector2(900, 552)
+
+[node name="Point2" type="Marker2D" parent="World/Drones/Drone1"]
+position = Vector2(1118, 790)
+
+[node name="Drone2" type="Node2D" parent="World/Drones"]
+script = ExtResource("4_drone")
+speed = 120.0
+sit = 3.0
+phase = 0.33
+route_color = Color(0.32, 0.88, 1, 1)
+
+[node name="Point1" type="Marker2D" parent="World/Drones/Drone2"]
+position = Vector2(900, 552)
+
+[node name="Point2" type="Marker2D" parent="World/Drones/Drone2"]
+position = Vector2(1560, 402)
+
+[node name="Drone3" type="Node2D" parent="World/Drones"]
+script = ExtResource("4_drone")
+speed = 100.0
+sit = 2.0
+phase = 0.66
+route_color = Color(1, 0.48, 0.85, 1)
+
+[node name="Point1" type="Marker2D" parent="World/Drones/Drone3"]
+position = Vector2(900, 552)
+
+[node name="Point2" type="Marker2D" parent="World/Drones/Drone3"]
+position = Vector2(1590, 600)
+
+[node name="Shade" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_shade")
+expand_mode = 1
+
+[node name="Menu" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 70.0
+offset_top = -377.0
+offset_right = 690.0
+offset_bottom = 377.0
+grow_vertical = 2
+theme_override_constants/separation = 22
+alignment = 1
+
+[node name="Logo" type="TextureRect" parent="Menu"]
+custom_minimum_size = Vector2(620, 307)
+layout_mode = 2
+texture = ExtResource("5_logo")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Buttons" type="VBoxContainer" parent="Menu"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 22
+
+[node name="MachineGunTest" type="Button" parent="Menu/Buttons"]
+custom_minimum_size = Vector2(600, 140)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"GoldButton"
+text = "Тест кулемета"
+metadata/scene = "res://game/sandbox/turret_sandbox.tscn"
+metadata/turret = "Кулемет"
+
+[node name="GrenadeLauncherTest" type="Button" parent="Menu/Buttons"]
+custom_minimum_size = Vector2(600, 120)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"DarkButton"
+text = "Тест гранатомета"
+metadata/scene = "res://game/sandbox/turret_sandbox.tscn"
+metadata/turret = "Гранатомет"
+
+[node name="MapEditor" type="Button" parent="Menu/Buttons"]
+custom_minimum_size = Vector2(600, 120)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"DarkButton"
+text = "Редактор карти"
+metadata/scene = "res://game/editor/map_editor.tscn"
+
+[node name="Sound" type="TextureButton" parent="."]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -156.0
+offset_top = -170.0
+offset_right = -36.0
+offset_bottom = -50.0
+grow_horizontal = 0
+grow_vertical = 0
+tooltip_text = "Звук"
+focus_mode = 0
+toggle_mode = true
+texture_normal = ExtResource("6_on")
+texture_pressed = ExtResource("7_off")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="Version" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -200.0
+offset_top = -46.0
+offset_right = -40.0
+offset_bottom = -12.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "v0.1"
+horizontal_alignment = 2

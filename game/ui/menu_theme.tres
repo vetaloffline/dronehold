@@ -1,0 +1,87 @@
+[gd_resource type="Theme" load_steps=11 format=3]
+
+[ext_resource type="Texture2D" path="res://art/objects/ui/main_menu/btn_gold.png" id="1_gold"]
+[ext_resource type="Texture2D" path="res://art/objects/ui/main_menu/btn_dark.png" id="2_dark"]
+
+[sub_resource type="SystemFont" id="SystemFont_menu"]
+font_names = PackedStringArray("Avenir Next", "Roboto", "Segoe UI", "sans-serif")
+font_weight = 700
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_focus"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_gold"]
+texture = ExtResource("1_gold")
+texture_margin_left = 99.0
+texture_margin_top = 40.0
+texture_margin_right = 99.0
+texture_margin_bottom = 40.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_gold_hover"]
+texture = ExtResource("1_gold")
+texture_margin_left = 99.0
+texture_margin_top = 40.0
+texture_margin_right = 99.0
+texture_margin_bottom = 40.0
+modulate_color = Color(1.15, 1.15, 1.15, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_gold_pressed"]
+texture = ExtResource("1_gold")
+texture_margin_left = 99.0
+texture_margin_top = 40.0
+texture_margin_right = 99.0
+texture_margin_bottom = 40.0
+modulate_color = Color(0.82, 0.82, 0.82, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_dark"]
+texture = ExtResource("2_dark")
+texture_margin_left = 85.0
+texture_margin_top = 34.0
+texture_margin_right = 85.0
+texture_margin_bottom = 34.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_dark_hover"]
+texture = ExtResource("2_dark")
+texture_margin_left = 85.0
+texture_margin_top = 34.0
+texture_margin_right = 85.0
+texture_margin_bottom = 34.0
+modulate_color = Color(1.2, 1.2, 1.2, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_dark_pressed"]
+texture = ExtResource("2_dark")
+texture_margin_left = 85.0
+texture_margin_top = 34.0
+texture_margin_right = 85.0
+texture_margin_bottom = 34.0
+modulate_color = Color(0.8, 0.8, 0.8, 1)
+
+[resource]
+default_font = SubResource("SystemFont_menu")
+DarkButton/base_type = &"Button"
+DarkButton/colors/font_color = Color(0.91, 0.945, 1, 1)
+DarkButton/colors/font_focus_color = Color(0.91, 0.945, 1, 1)
+DarkButton/colors/font_hover_color = Color(1, 1, 1, 1)
+DarkButton/colors/font_hover_pressed_color = Color(0.85, 0.9, 1, 1)
+DarkButton/colors/font_outline_color = Color(0, 0, 0, 0.6)
+DarkButton/colors/font_pressed_color = Color(0.85, 0.9, 1, 1)
+DarkButton/constants/outline_size = 6
+DarkButton/font_sizes/font_size = 36
+DarkButton/styles/focus = SubResource("StyleBoxEmpty_focus")
+DarkButton/styles/hover = SubResource("StyleBoxTexture_dark_hover")
+DarkButton/styles/hover_pressed = SubResource("StyleBoxTexture_dark_pressed")
+DarkButton/styles/normal = SubResource("StyleBoxTexture_dark")
+DarkButton/styles/pressed = SubResource("StyleBoxTexture_dark_pressed")
+GoldButton/base_type = &"Button"
+GoldButton/colors/font_color = Color(0.165, 0.1, 0.02, 1)
+GoldButton/colors/font_focus_color = Color(0.165, 0.1, 0.02, 1)
+GoldButton/colors/font_hover_color = Color(0.12, 0.07, 0.01, 1)
+GoldButton/colors/font_hover_pressed_color = Color(0.12, 0.07, 0.01, 1)
+GoldButton/colors/font_pressed_color = Color(0.12, 0.07, 0.01, 1)
+GoldButton/font_sizes/font_size = 42
+GoldButton/styles/focus = SubResource("StyleBoxEmpty_focus")
+GoldButton/styles/hover = SubResource("StyleBoxTexture_gold_hover")
+GoldButton/styles/hover_pressed = SubResource("StyleBoxTexture_gold_pressed")
+GoldButton/styles/normal = SubResource("StyleBoxTexture_gold")
+GoldButton/styles/pressed = SubResource("StyleBoxTexture_gold_pressed")
+Label/colors/font_color = Color(0.86, 0.9, 1, 0.6)
+Label/font_sizes/font_size = 22
