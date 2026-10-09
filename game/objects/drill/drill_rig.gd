@@ -56,6 +56,12 @@ extends Resource
 ## Тремтіння при пострілі.
 @export_range(0.0, 3.0, 0.05) var recoil := 0.5
 
+@export_group("Mining")
+## Кристалів за один цикл (рахуються, коли промінь гасне). Береться зі свого rig бура, не з копії в жилі.
+@export_range(0, 100, 1) var crystals_per_cycle := 5
+## Сховище бура: стільки кристалів чекає на дрона. Повне — бур стоїть з піднятою рукою.
+@export_range(1, 1000, 1) var storage := 50
+
 @export_group("Beam")
 ## Точка виходу променя: зсув від лінзи в системі голови, px.
 @export var tip_offset := Vector2(5, 0)
@@ -121,3 +127,13 @@ extends Resource
 
 func cycle_len() -> float:
 	return maxf(0.001, t_move * 2.0 + t_charge + t_fire + t_cool + t_wait)
+
+
+## Seconds from the start of a cycle to the moment the beam goes out (lower + charge + fire).
+func fire_end() -> float:
+	return t_move + t_charge + t_fire
+
+
+## How many times the beam has gone out by time `t` (0 before the first one).
+func beams_done(t: float) -> int:
+	return maxi(0, int(floor((t - fire_end()) / cycle_len())) + 1)

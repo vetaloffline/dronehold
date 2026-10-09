@@ -1,34 +1,58 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene format=3 uid="uid://dshg23s6houjy"]
 
-[ext_resource type="Script" path="res://game/objects/core/core.gd" id="1_core"]
-[ext_resource type="Resource" path="res://game/objects/core/core_rig.tres" id="2_rig"]
-[ext_resource type="Texture2D" path="res://art/objects/buildings/core/core_shadow_cast.png" id="3_cast"]
-[ext_resource type="Texture2D" path="res://art/objects/buildings/core/core_shadow_contact.png" id="4_contact"]
-[ext_resource type="Texture2D" path="res://art/objects/buildings/core/core.png" id="5_body"]
-[ext_resource type="Shader" path="res://game/objects/core/core_shadow.gdshader" id="6_shader"]
+[ext_resource type="Script" uid="uid://if0potyjlist" path="res://game/objects/core/core.gd" id="1_core"]
+[ext_resource type="Resource" uid="uid://cagx2jm64es0m" path="res://game/objects/core/core_rig.tres" id="2_rig"]
+[ext_resource type="Texture2D" uid="uid://c2d1ekuw5inp4" path="res://art/objects/buildings/core/core_shadow_cast.png" id="3_cast"]
+[ext_resource type="Texture2D" uid="uid://ba3cpam2cboje" path="res://art/objects/buildings/core/core_shadow_contact.png" id="4_contact"]
+[ext_resource type="Texture2D" uid="uid://bcg81hswacqfk" path="res://art/objects/buildings/core/core.png" id="5_body"]
+[ext_resource type="Shader" uid="uid://c582nr3tlbu0a" path="res://game/objects/core/core_shadow.gdshader" id="6_shader"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_cast"]
 shader = ExtResource("6_shader")
+shader_parameter/silhouette = false
+shader_parameter/tint = Color(0.011764706, 0.043137256, 0.101960786, 1)
+shader_parameter/opacity = 1.0
+shader_parameter/blur_lod = 0.0
 
-[node name="Core" type="Node2D"]
+[node name="Core" type="Node2D" unique_id=1569699796 groups=["enemy_target"]]
 texture_filter = 4
+position = Vector2(96, 129.6)
+scale = Vector2(0.2, 0.2)
 script = ExtResource("1_core")
 rig = ExtResource("2_rig")
 
-[node name="CastPivot" type="Node2D" parent="."]
+[node name="CastPivot" type="Node2D" parent="." unique_id=1106769908]
 
-[node name="CastShadow" type="Sprite2D" parent="CastPivot"]
+[node name="CastShadow" type="Sprite2D" parent="CastPivot" unique_id=1475530655]
 material = SubResource("ShaderMaterial_cast")
 texture = ExtResource("3_cast")
 centered = false
 offset = Vector2(-762, -992)
 
-[node name="ContactShadow" type="Sprite2D" parent="."]
+[node name="ContactShadow" type="Sprite2D" parent="." unique_id=2054343650]
 texture = ExtResource("4_contact")
 centered = false
 offset = Vector2(-762, -992)
 
-[node name="Body" type="Sprite2D" parent="."]
+[node name="Body" type="Sprite2D" parent="." unique_id=941306640]
 texture = ExtResource("5_body")
 centered = false
 offset = Vector2(-762, -992)
+
+[node name="DronePad1" type="Marker2D" parent="." unique_id=613793899]
+position = Vector2(-555, -642.99994)
+
+[node name="DronePad2" type="Marker2D" parent="." unique_id=821663323]
+position = Vector2(-89.99999, 126.99998)
+
+[node name="DronePad3" type="Marker2D" parent="." unique_id=1008075945]
+position = Vector2(530, -93.000015)
+
+[node name="DronePad4" type="Marker2D" parent="." unique_id=1970088277]
+position = Vector2(675, -483)
+
+[node name="DronePad5" type="Marker2D" parent="." unique_id=943286272]
+position = Vector2(65.00003, -877.99994)
+
+[node name="DronePad6" type="Marker2D" parent="." unique_id=588825253]
+position = Vector2(-754.9999, -228)

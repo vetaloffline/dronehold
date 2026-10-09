@@ -54,7 +54,7 @@ const DEFAULT_RIG := preload("res://game/objects/slime/slime_rig.tres")
 @export var frozen := false
 
 @export_group("Combat")
-@export_range(0.1, 1000.0, 0.1, "or_greater") var health := 10.0
+@export_range(0.1, 1000.0, 0.1, "or_greater") var health := 3.0
 
 @export_group("Editor preview")
 @export var preview_in_editor := true
@@ -98,6 +98,13 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	if view:
 		view.free_nodes()
+
+
+## Back in the tree (the editor does this when you switch scene tabs; _ready does not run again):
+## build the bands again, deferred so the map is not adding children while it enters the tree.
+func _enter_tree() -> void:
+	if _ready_ok and view:
+		view.setup.call_deferred(map.world(), map.shadows(), map.grid, rig, SLIME_SHADER)
 
 
 func _rebuild_field() -> void:

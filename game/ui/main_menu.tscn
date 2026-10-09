@@ -109,11 +109,19 @@ layout_mode = 2
 size_flags_horizontal = 4
 theme_override_constants/separation = 22
 
-[node name="MachineGunTest" type="Button" parent="Menu/Buttons"]
+[node name="Play" type="Button" parent="Menu/Buttons"]
 custom_minimum_size = Vector2(600, 140)
 layout_mode = 2
 focus_mode = 0
 theme_type_variation = &"GoldButton"
+text = "Грати"
+metadata/scene = "res://game/main.tscn"
+
+[node name="MachineGunTest" type="Button" parent="Menu/Buttons"]
+custom_minimum_size = Vector2(600, 120)
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"DarkButton"
 text = "Тест кулемета"
 metadata/scene = "res://game/sandbox/turret_sandbox.tscn"
 metadata/turret = "Кулемет"

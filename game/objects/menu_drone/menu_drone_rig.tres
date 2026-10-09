@@ -1,8 +1,9 @@
-[gd_resource type="Resource" script_class="MenuDroneRig" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="MenuDroneRig" format=3 uid="uid://cpnyt3w5oyt7s"]
 
-[ext_resource type="Script" path="res://game/objects/menu_drone/menu_drone_rig.gd" id="1_rig"]
-[ext_resource type="Texture2D" path="res://art/objects/units/drone/drone.png" id="2_tex"]
+[ext_resource type="Script" uid="uid://cn2oxwiwfapef" path="res://game/objects/menu_drone/menu_drone_rig.gd" id="1_rig"]
+[ext_resource type="Texture2D" uid="uid://b5sptk0i5fk0y" path="res://art/objects/units/drone/drone.png" id="2_tex"]
 
 [resource]
 script = ExtResource("1_rig")
 texture = ExtResource("2_tex")
+nozzles = PackedVector2Array(-0.366, -0.27, 0.012, 0, 0.366, -0.3)

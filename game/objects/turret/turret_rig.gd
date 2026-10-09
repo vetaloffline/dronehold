@@ -63,7 +63,7 @@ const VIEWS := [0, 45, 90, 135, 180, 225, 270, 315]  # the original 8 (art file 
 @export_range(20.0, 2000.0, 1.0) var range_px := 451.72
 ## Пострілів за секунду.
 @export_range(0.2, 30.0, 0.1) var fire_rate := 12.0
-## Шкода за постріл (у слизня 10 hp).
+## Шкода за постріл (у слизня 3 hp; кулемет 10, гранатомет 20 у ядрі вибуху).
 @export_range(0.0, 100.0, 0.1) var damage := 1.0
 
 @export_group("Recoil and flash")

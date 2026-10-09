@@ -15,6 +15,8 @@ signal map_changed
 @export_range(0.05, 0.95, 0.01) var threshold := 0.5
 @export var grid: MapGrid
 @export_tool_button("Скинути сітку зі схеми") var rebuild_grid_action := rebuild_grid
+## Refill the drone layer from the layout's cliffs (wipes the hand painting of the drone layer).
+@export_tool_button("Скинути зону дронів зі схеми") var rebuild_no_fly_action := rebuild_no_fly
 ## Without a layout: an open grid of this many cells (test scenes). Ignored when `layout` is set.
 @export var open_size := Vector2i.ZERO
 
@@ -32,6 +34,9 @@ signal map_changed
 	set(v): show_blocked = v; _redraw_overlay()
 @export var show_footprints := true:
 	set(v): show_footprints = v; _redraw_overlay()
+## Drone layer (purple: drones do not fly there).
+@export var show_no_fly := false:
+	set(v): show_no_fly = v; _redraw_overlay()
 ## Show the overlay in the running game too (debug).
 @export var overlay_in_game := false
 
@@ -53,6 +58,9 @@ func _enter_tree() -> void:
 func _ready() -> void:
 	if grid == null and layout != null:
 		rebuild_grid()
+	# Drone layer never painted yet: start from the layout's cliffs (in memory; the map editor saves it).
+	if grid and layout and grid.no_fly.size() != grid.cols * grid.rows:
+		grid.no_fly = MapGrid.cliffs_from_layout(layout.get_image(), grid.cols, grid.rows, threshold)
 	_update_rot()
 	_redraw_overlay()
 	var ov := get_node_or_null("Overlay") as CanvasItem
@@ -77,6 +85,18 @@ func rebuild_grid() -> void:
 	else:
 		grid = g
 	print("GameMap: grid %dx%d, rock %d, %d ms" % [grid.cols, grid.rows, grid.count_kind(MapGrid.Kind.ROCK), Time.get_ticks_msec() - t0])
+	_redraw_overlay()
+	map_changed.emit()
+
+
+func rebuild_no_fly() -> void:
+	if layout == null or grid == null:
+		push_warning("GameMap: no layout image / grid")
+		return
+	grid.no_fly = MapGrid.cliffs_from_layout(layout.get_image(), grid.cols, grid.rows, threshold)
+	if grid.resource_path != "":
+		ResourceSaver.save(grid)
+	print("GameMap: drone no-fly cells %d" % grid.no_fly_count())
 	_redraw_overlay()
 	map_changed.emit()
 

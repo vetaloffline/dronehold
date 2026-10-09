@@ -49,6 +49,10 @@ extends Resource
 @export_range(0.2, 1.5, 0.01) var drill_scale := 0.5
 ## Куди б'є лазер, px жили.
 @export var hit_point := Vector2(892, 580)
+## Слот зліва (жила з drill_side = ліворуч): бур віддзеркалений, тут — де його початок і куди б'є.
+## За замовчуванням — дзеркало правих відносно ground_point.x (824): x' = 2·824 − x.
+@export var drill_offset_left := Vector2(768, 160)
+@export var hit_point_left := Vector2(756, 580)
 ## Голова бура сама цілиться в точку удару (+ drill.fire_head як поправка).
 @export var auto_aim := true
 ## Кристал розжарюється: сяйво навколо точки удару.

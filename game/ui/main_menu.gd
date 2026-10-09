@@ -48,12 +48,13 @@ func _layout() -> void:
 	var k := maxf(size.x / BG_SIZE.x, size.y / BG_SIZE.y)
 	_world.scale = Vector2(k, k)
 	_world.position = (size - BG_SIZE * k) * BG_ALIGN
-	_menu.offset_left = MENU_LEFT + _safe_left()
+	_menu.offset_left = MENU_LEFT + safe_left(size.x)
 	_menu.offset_right = _menu.offset_left + _menu.get_combined_minimum_size().x
 
 
-## Left inset of the display safe area, in canvas px (0 on PC).
-func _safe_left() -> float:
+## Left inset of the display safe area (phone notch), in canvas px of a canvas `canvas_w` wide
+## (0 on PC). The game HUD uses it too.
+static func safe_left(canvas_w: float) -> float:
 	var win := DisplayServer.window_get_size()
 	if win.x <= 0:
 		return 0.0
@@ -61,7 +62,7 @@ func _safe_left() -> float:
 	var screen := DisplayServer.screen_get_size()
 	if safe.size.x <= 0 or screen.x != win.x:
 		return 0.0  # windowed: no notch
-	return safe.position.x * size.x / win.x
+	return safe.position.x * canvas_w / win.x
 
 
 ## Hover / press feel: slightly brighter on hover, shrinks a bit while held.

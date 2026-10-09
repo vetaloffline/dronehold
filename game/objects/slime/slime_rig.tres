@@ -6,8 +6,6 @@
 [resource]
 script = ExtResource("1_rig")
 texture = ExtResource("2_tex")
-frame_w = null
-skin_count = null
 pivot = Vector2(605, 718)
 sprite_w = 1177.0
 eyes = Array[Vector4]([Vector4(583, 386, 80, 66), Vector4(694, 482, 82, 73), Vector4(883, 443, 88, 88)])

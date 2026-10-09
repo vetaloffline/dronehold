@@ -11,6 +11,10 @@ var _before := PackedByteArray()
 var _spot := Vector2i.ZERO
 
 
+var _fly_before := PackedByteArray()
+var _kind_c := MapGrid.Kind.GROUND
+
+
 func _initialize() -> void:
 	change_scene_to_file(ProjectSettings.get_setting("application/run/main_scene"))
 
@@ -117,6 +121,27 @@ func _process(_dt: float) -> bool:
 			_ed.undo()
 			check(g.kind(_spot.x, _spot.y + 1) == MapGrid.Kind.GROUND, "undo takes the rectangle back")
 			check(g.kind(_spot.x, _spot.y) == MapGrid.Kind.ROCK, "undo keeps the earlier stroke")
+			# Drone layer: «Дрон» mode paints only where drones do not fly; the cell kinds stay.
+			var map := _ed.get_node("Map03") as GameMap
+			_fly_before = g.no_fly.duplicate()
+			check(g.no_fly.size() == g.cols * g.rows and g.no_fly_count() > 0, "drone layer is filled from the layout's cliffs (%d cells)" % g.no_fly_count())
+			_ed.set_layer(MapEditor.Layer.DRONE)
+			check(map.show_no_fly and not map.show_blocked, "«Дрон» shows the purple layer instead of the cell kinds")
+			_ed.set_no_fly(true)
+			_ed.set_rect_tool(false)
+			var c := _spot + Vector2i(0, 4)
+			_kind_c = g.kind(c.x, c.y)
+			_mouse(c, true)
+			_mouse(c, false)
+		32:
+			var g := (_ed.get_node("Map03") as GameMap).grid
+			var c := _spot + Vector2i(0, 4)
+			check(g.fly_blocked(c.x, c.y), "drone brush marks the cell no-fly")
+			check(g.kind(c.x, c.y) == _kind_c, "the cell kind is not touched by the drone brush")
+			_ed.undo()
+			check(not g.fly_blocked(c.x, c.y), "undo takes the drone stroke back")
+			check(g.kind(_spot.x, _spot.y) == MapGrid.Kind.ROCK, "undo of a drone stroke keeps the cell strokes")
+			_ed.set_layer(MapEditor.Layer.CELLS)
 			# Leave without saving: first press warns, second leaves and restores the grid.
 			_ed.call("_leave")
 			check(current_scene == _ed, "first «Меню» with unsaved changes only warns")
@@ -125,6 +150,7 @@ func _process(_dt: float) -> bool:
 			check(current_scene != null and current_scene.name == "MainMenu", "second «Меню» goes back")
 			var g := (load("res://game/maps/map_03/map_03_grid.tres") as MapGrid)
 			check(g.kinds == _before, "leaving without saving restores the grid")
+			check(g.no_fly == _fly_before or g.no_fly.is_empty(), "…and the drone layer")
 			return _finish()
 	return false
 

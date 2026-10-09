@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="CoreRig" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="CoreRig" format=3 uid="uid://cagx2jm64es0m"]
 
-[ext_resource type="Script" path="res://game/objects/core/core_rig.gd" id="1_rig"]
+[ext_resource type="Script" uid="uid://bjh2euunb2pu5" path="res://game/objects/core/core_rig.gd" id="1_rig"]
 
 [resource]
 script = ExtResource("1_rig")

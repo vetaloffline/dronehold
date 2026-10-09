@@ -38,6 +38,11 @@ func get_rig() -> TurretRig:
 	return null
 
 
+## Name on the info card. Override.
+func display_name() -> String:
+	return name
+
+
 func get_map_scale() -> float:
 	var r := get_rig()
 	return r.map_scale if r else 1.0

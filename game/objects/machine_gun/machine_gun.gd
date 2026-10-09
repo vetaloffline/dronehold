@@ -24,6 +24,10 @@ func get_rig() -> TurretRig:
 	return rig
 
 
+func display_name() -> String:
+	return "Кулемет"
+
+
 func get_clear_radius() -> float:
 	return 2.5
 
@@ -60,8 +64,11 @@ func step_fx(dt: float) -> void:
 		for j in 4:
 			_sparks.append(make_spark(b.p, HIT_SPARK_SPEED * t2l, Color8(255, 210, 120), 0.25))
 		var sim := swarm_sim()
-		if sim and sim.alive(b.id):
-			sim.damage(b.id, rig.damage)
+		if sim == null or b.id < 0:
+			continue  # a pierce continuation: its damage is already done
+		var left := sim.hit_with_pool(b.id, rig.damage) if sim.alive(b.id) else rig.damage
+		if rig.pierce and left > 0.0:
+			_pierce_on(sim, b, left, keep)
 	_tracers = keep
 	var cas := []
 	for c in _casings:
@@ -79,6 +86,20 @@ func step_fx(dt: float) -> void:
 		cas.append(c)
 	_casings = cas
 	_sparks = step_sparks(_sparks, dt, SPARK_GRAVITY * t2l)
+
+
+## The bullet killed its target and has `left` damage: it flies on along the same line to the end of
+## the range, hitting the slimes on it (SwarmSim.pierce). A tracer shows the flight to where it stopped.
+func _pierce_on(sim: SwarmSim, b: Dictionary, left: float, tracers: Array) -> void:
+	var from := to_map(b.p)
+	var dir := (to_map(b.p + b.u) - from).normalized()
+	var length := rig.range_px - from.distance_to(position)
+	if length <= 0.0:
+		return
+	var res := sim.pierce(from, dir, length, left, rig.pierce_radius, rig.pierce_max, b.id)
+	var stop: float = res.stop
+	if stop > 1.0:
+		tracers.append({"p": b.p, "u": b.u, "left": stop * rig.map_to_local(), "id": -1})
 
 
 ## Ground layer (drawn before the children): casings.

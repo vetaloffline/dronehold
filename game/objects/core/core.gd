@@ -1,13 +1,19 @@
 @tool
 class_name Core
 extends MapObject
-## The core: 3×3 building, the enemies' target; losing it loses the game.
+## The core: 6×6 building, the enemies' target; losing it loses the game.
 ## Tree (core.tscn): CastPivot/CastShadow · ContactShadow · Body. Shadows come first in the tree,
 ## so they draw under the body without Y-sort (docs/godot-notes.md).
 ## All tunables live in `rig` (core_rig.tres, shared by every core).
+## Drone landing points: DronePad1…3 markers in core.tscn (drone_pads()); drag them in the core scene.
 
 const CAST_CODEX := preload("res://art/objects/buildings/core/core_shadow_cast.png")
 const CAST_SILHOUETTE := preload("res://art/objects/buildings/core/core.png")
+
+## Cargo drones the core sends out when the match starts (game only).
+@export_range(0, 20, 1) var start_drones := 2
+
+const CARGO_DRONE := preload("res://game/objects/cargo_drone/cargo_drone.gd")
 
 @export var rig: CoreRig:
 	set(v):
@@ -41,15 +47,37 @@ func get_path_cost() -> float:
 
 func _enter_tree() -> void:
 	add_to_group("enemy_target", true)
+	add_to_group("storage", true)  # drones bring crystals here
 	super._enter_tree()
 
 
 func _ready() -> void:
 	_apply()
+	if not Engine.is_editor_hint():
+		_spawn_drones.call_deferred()
+
+
+## Start drones hang next to the core and go to work at once.
+func _spawn_drones() -> void:
+	var par := get_parent()
+	if par == null:
+		return
+	for i in start_drones:
+		var d := CARGO_DRONE.new() as CargoDrone
+		d.name = "CargoDrone%d" % (i + 1)
+		d.slot = i
+		d.position = position + Vector2(-40.0 + 80.0 * i, 30.0)
+		par.add_child(d)
 
 
 func _process(_dt: float) -> void:
 	editor_snap()
+	if Engine.is_editor_hint():
+		queue_redraw()
+
+
+func _draw() -> void:
+	draw_drone_pads()
 
 
 func _apply() -> void:
