@@ -7,7 +7,7 @@ extends MapObject
 ## Node origin = ground point; everything inside is in crystal_vein.png px minus the ground point.
 
 ## Cell of the drill slot relative to the vein cell (map_03_editor.html VEIN_SLOT: right-back corner).
-const SLOT := Vector2i(3, -1)
+const SLOT := Vector2i(6, -2)
 ## Radial white → transparent, shared by all glows.
 static var _glow_tex: GradientTexture2D
 
@@ -29,7 +29,7 @@ var _t := 0.0
 
 
 func get_footprint() -> Vector2i:
-	return Vector2i(3, 3)
+	return Vector2i(6, 6)
 
 
 func get_map_shift() -> Vector2:

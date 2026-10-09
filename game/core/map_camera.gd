@@ -1,6 +1,6 @@
 class_name MapCamera
 extends Camera2D
-## Game camera over a map. Phone: one finger drags, two fingers pinch-zoom.
+## Game camera over a map. Phone: one finger drags, two fingers pinch-zoom (and drag).
 ## PC: drag with any mouse button, wheel zooms to the cursor, trackpad pan / pinch.
 
 @export var map: GameMap
@@ -9,9 +9,14 @@ extends Camera2D
 @export_range(1.01, 1.5, 0.01) var wheel_step := 1.12
 ## Left / right mouse button drags the map. Off: only the middle button (test scenes use clicks).
 @export var drag_with_any_button := true
+## With `drag_with_any_button` off: the right button drags too (map editor: left paints).
+@export var drag_with_right := false
+## One finger drags the map. Off: only two fingers (map editor: one finger paints).
+@export var one_finger_pan := true
 
 var _touches := {}
 var _pinch_dist := 0.0
+var _pinch_centre := Vector2.ZERO
 var _dragging := false
 
 
@@ -31,21 +36,28 @@ func _unhandled_input(e: InputEvent) -> void:
 		else:
 			_touches.erase(e.index)
 		_pinch_dist = _touch_dist()
+		if _touches.size() == 2:
+			_pinch_centre = _touch_centre()
 	elif e is InputEventScreenDrag:
 		_touches[e.index] = e.position
-		if _touches.size() == 1:
+		if _touches.size() == 1 and one_finger_pan:
 			position -= e.relative / zoom
 		elif _touches.size() == 2:
 			var d := _touch_dist()
+			var centre := _touch_centre()
 			if _pinch_dist > 0.0 and d > 0.0:
-				_zoom_at(d / _pinch_dist, _touch_centre())
+				_zoom_at(d / _pinch_dist, centre)
+			if not one_finger_pan:
+				position -= (centre - _pinch_centre) / zoom
 			_pinch_dist = d
+			_pinch_centre = centre
 	elif e is InputEventMouseButton:
 		if e.button_index == MOUSE_BUTTON_WHEEL_UP and e.pressed:
 			_zoom_at(wheel_step, e.position)
 		elif e.button_index == MOUSE_BUTTON_WHEEL_DOWN and e.pressed:
 			_zoom_at(1.0 / wheel_step, e.position)
-		elif e.button_index == MOUSE_BUTTON_MIDDLE or (drag_with_any_button and e.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]):
+		elif e.button_index == MOUSE_BUTTON_MIDDLE or (drag_with_any_button and e.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]) \
+				or (drag_with_right and e.button_index == MOUSE_BUTTON_RIGHT):
 			_dragging = e.pressed
 	elif e is InputEventMouseMotion and _dragging and _touches.is_empty():
 		position -= e.relative / zoom

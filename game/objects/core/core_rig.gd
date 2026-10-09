@@ -16,8 +16,8 @@ enum ShadowSource { CODEX, SILHOUETTE }
 ## Sprite → map scale (map_03_editor.html SPR.core.s).
 @export_range(0.02, 1.2, 0.005) var map_scale := 0.2:
 	set(v): map_scale = v; emit_changed()
-## Ground point shift from the 3×3 footprint centre, cells (SPR.core.dx, dy).
-@export var map_shift := Vector2(0, 1.2):
+## Ground point shift from the 6×6 footprint centre, cells (SPR.core.dx, dy × 2: cells are 32×24).
+@export var map_shift := Vector2(0, 2.4):
 	set(v): map_shift = v; emit_changed()
 
 @export_group("Cast shadow")

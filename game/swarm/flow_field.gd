@@ -30,8 +30,9 @@ func build(grid: MapGrid, targets: Array[Vector2i], building_cost := {}) -> void
 	rows = grid.rows
 	var n := cols * rows
 	cost.resize(n)
+	var blocked := grid.blocked
 	for i in n:
-		cost[i] = INF if grid.blocked[i] == 1 else 1.0
+		cost[i] = INF if blocked[i] == 1 else 1.0
 	for i in building_cost:
 		if cost[i] < INF:
 			cost[i] = 1.0 + float(building_cost[i])

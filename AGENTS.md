@@ -43,6 +43,7 @@ godot --headless --path . --script res://tests/smoke_game.gd
 godot --headless --path . --script res://tests/smoke_sandbox.gd
 godot --headless --path . --script res://tests/smoke_menu.gd
 godot --headless --path . --script res://tests/smoke_turret_360.gd
+godot --headless --path . --script res://tests/smoke_map_editor.gd
 ```
 
 Усі — exit 0 **і** у виводі є `tests: … 0 failed` / `smoke: 0 failed`, нема `SCRIPT ERROR`

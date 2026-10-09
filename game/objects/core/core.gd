@@ -20,7 +20,7 @@ const CAST_SILHOUETTE := preload("res://art/objects/buildings/core/core.png")
 
 
 func get_footprint() -> Vector2i:
-	return Vector2i(3, 3)
+	return Vector2i(6, 6)
 
 
 func get_map_shift() -> Vector2:
@@ -32,7 +32,7 @@ func get_map_scale() -> float:
 
 
 func get_clear_radius() -> float:
-	return 7.0
+	return 14.0
 
 
 func get_path_cost() -> float:

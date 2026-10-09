@@ -13,7 +13,7 @@ extends Resource
 @export_range(0.02, 1.0, 0.005) var map_scale := 0.1:
 	set(v): map_scale = v; emit_changed()
 ## Shift of the ground point from the cell centre, cells.
-@export var map_shift := Vector2(0.0, 0.5):
+@export var map_shift := Vector2(0.0, 1.0):
 	set(v): map_shift = v; emit_changed()
 
 @export_group("Geometry")

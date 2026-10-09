@@ -2,10 +2,22 @@
 class_name MapGrid
 extends Resource
 ## Build / navigation grid of a map. Cells are CELL px (flattened for the 3/4 camera).
-## A cell is blocked when more than `threshold` of it is cliff or pit in the layout image —
-## the same rule as art/maps/map_03/map_03_editor.html (coverage(), cellBlocked()).
+## Every cell has a kind = two rules: can the player build there, can slimes walk there.
+##   GROUND   build + walk          PASS     walk only (roads, spawn zones)
+##   ROCK     neither (cliff, pit)  PLATEAU  build only (slimes go around)
+## First fill: from the layout image — a cell is ROCK when more than `threshold` of it is cliff
+## or pit (same rule as art/maps/map_03/map_03_editor.html coverage(), cellBlocked()).
+## After that the kinds are painted by hand and saved in the grid .tres.
 
-const CELL := Vector2(64.0, 48.0)
+const CELL := Vector2(32.0, 24.0)
+enum Kind { GROUND, PASS, ROCK, PLATEAU }
+## [can build, can walk] per kind.
+const RULES := {
+	Kind.GROUND: [true, true],
+	Kind.PASS: [false, true],
+	Kind.ROCK: [false, false],
+	Kind.PLATEAU: [true, false],
+}
 ## Layout colours (map_03_editor.html LCOL): ground (150,112,70), cliff (120,118,112), pit (14,12,16).
 ## Only ground has red > 0.53, so the red channel tells ground from the rest.
 const GROUND_RED_MIN := 0.53
@@ -15,8 +27,16 @@ const LAYOUT_STEP := 4
 @export var cols := 0
 @export var rows := 0
 @export var threshold := 0.5
-## 1 = blocked (cliff / pit), 0 = open. Index = r * cols + c.
-@export var blocked := PackedByteArray()
+## Kind per cell (Kind enum). Index = r * cols + c.
+@export var kinds := PackedByteArray()
+## 1 = slimes can not walk (ROCK, PLATEAU), 0 = they can. Derived from `kinds` (rebuilt on first
+## read after loading); the swarm and the flow field read it in their hot loops.
+var blocked: PackedByteArray:
+	get:
+		if _blocked.size() != kinds.size():
+			refresh()
+		return _blocked
+var _blocked := PackedByteArray()
 
 
 static func from_layout(image: Image, thr := 0.5) -> MapGrid:
@@ -32,7 +52,8 @@ static func from_layout(image: Image, thr := 0.5) -> MapGrid:
 	var lw := int(ceil(float(w) / LAYOUT_STEP))
 	var lh := int(ceil(float(h) / LAYOUT_STEP))
 	small.resize(lw, lh, Image.INTERPOLATE_NEAREST)
-	g.blocked.resize(g.cols * g.rows)
+	var k := PackedByteArray()
+	k.resize(g.cols * g.rows)
 	for r in g.rows:
 		for c in g.cols:
 			var x0 := int(floor(c * CELL.x / LAYOUT_STEP))
@@ -47,18 +68,31 @@ static func from_layout(image: Image, thr := 0.5) -> MapGrid:
 					if small.get_pixel(x, y).r < GROUND_RED_MIN:
 						bad += 1
 			var any := float(bad) / n if n > 0 else 1.0
-			g.blocked[r * g.cols + c] = 1 if any > thr else 0
+			k[r * g.cols + c] = Kind.ROCK if any > thr else Kind.GROUND
+	g.kinds = k
+	g.refresh()
 	return g
 
 
-## Grid with every cell open (test scenes).
+## Grid with every cell GROUND (test scenes).
 static func open(c: int, r: int) -> MapGrid:
 	var g := MapGrid.new()
 	g.cols = c
 	g.rows = r
-	g.blocked.resize(c * r)
-	g.blocked.fill(0)
+	var k := PackedByteArray()
+	k.resize(c * r)
+	k.fill(Kind.GROUND)
+	g.kinds = k
+	g.refresh()
 	return g
+
+
+## Recompute `blocked` from `kinds` (call after changing `kinds` directly).
+func refresh() -> void:
+	_blocked.resize(kinds.size())
+	for i in kinds.size():
+		_blocked[i] = 0 if RULES[kinds[i]][1] else 1
+	emit_changed()
 
 
 func size_px() -> Vector2:
@@ -69,8 +103,30 @@ func inside(c: int, r: int) -> bool:
 	return c >= 0 and r >= 0 and c < cols and r < rows
 
 
+func kind(c: int, r: int) -> Kind:
+	return kinds[r * cols + c] as Kind if inside(c, r) else Kind.ROCK
+
+
+func set_kind(c: int, r: int, k: Kind) -> void:
+	if not inside(c, r):
+		return
+	var i := r * cols + c
+	var _b := blocked  # make sure _blocked is built
+	kinds[i] = k
+	_blocked[i] = 0 if RULES[k][1] else 1
+
+
+func can_build(c: int, r: int) -> bool:
+	return RULES[kind(c, r)][0]
+
+
+func can_walk(c: int, r: int) -> bool:
+	return RULES[kind(c, r)][1]
+
+
+## Slimes can not enter (outside the map counts as blocked).
 func is_blocked(c: int, r: int) -> bool:
-	return not inside(c, r) or blocked[r * cols + c] == 1
+	return not can_walk(c, r)
 
 
 func cell_at(p: Vector2) -> Vector2i:
@@ -85,8 +141,10 @@ func cell_center(c: Vector2i) -> Vector2:
 	return Vector2((c.x + 0.5) * CELL.x, (c.y + 0.5) * CELL.y)
 
 
+## Cells slimes can not walk.
 func blocked_count() -> int:
-	var n := 0
-	for v in blocked:
-		n += v
-	return n
+	return blocked.count(1)
+
+
+func count_kind(k: Kind) -> int:
+	return kinds.count(k)

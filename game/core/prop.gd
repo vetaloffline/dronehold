@@ -68,7 +68,8 @@ func _load_kind() -> void:
 		return
 	for p in data:
 		if p.get("name") == kind:
-			foot = Vector2i(int(p["foot"][0]), int(p["foot"][1]))
+			# props.json counts 64×48 cells (old HTML editor); the grid is 32×24.
+			foot = Vector2i(int(p["foot"][0]), int(p["foot"][1])) * 2
 			ground = Vector2(p["ground"][0], p["ground"][1])
 			body_w = float(p["body_w"])
 			texture = load(PROPS_DIR + String(p["file"])) as Texture2D

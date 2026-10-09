@@ -5,15 +5,16 @@ extends Node2D
 ## Layout of the scene (see docs/godot-editor.md):
 ##   Ground (chunks) · Rot (corruption) · Shadows (swarm shadows) · World (Y-sort: objects,
 ##   props, swarm) · Overlay (grid, editor only) · Swarm
-## The grid is computed from the layout image (cliff / pit) and stored in the scene, so the game
-## does not read the image at runtime. Press «Перерахувати сітку» after editing the layout.
+## The grid (cell kinds: ground / pass / rock / plateau) is a resource file next to the map
+## (map_NN_grid.tres), painted in the map editor. «Скинути сітку зі схеми» refills it from the layout
+## image (cliff / pit → rock) and wipes the hand painting.
 
 signal map_changed
 
 @export var layout: Texture2D
 @export_range(0.05, 0.95, 0.01) var threshold := 0.5
 @export var grid: MapGrid
-@export_tool_button("Перерахувати сітку") var rebuild_grid_action := rebuild_grid
+@export_tool_button("Скинути сітку зі схеми") var rebuild_grid_action := rebuild_grid
 ## Without a layout: an open grid of this many cells (test scenes). Ignored when `layout` is set.
 @export var open_size := Vector2i.ZERO
 
@@ -21,7 +22,7 @@ signal map_changed
 @export_range(0.0, 1.0, 0.01) var rot_alpha := 0.85:
 	set(v): rot_alpha = v; _update_rot()
 ## Soft edge of the cleared circle, cells.
-@export_range(0.0, 5.0, 0.1) var rot_soft := 1.5:
+@export_range(0.0, 10.0, 0.1) var rot_soft := 3.0:
 	set(v): rot_soft = v; _update_rot()
 
 @export_group("Editor overlay")
@@ -35,6 +36,10 @@ signal map_changed
 @export var overlay_in_game := false
 
 const MAX_CLEARS := 64
+const KIND_NAMES := {
+	MapGrid.Kind.GROUND: "земля", MapGrid.Kind.PASS: "прохід",
+	MapGrid.Kind.ROCK: "скеля / прірва", MapGrid.Kind.PLATEAU: "плато",
+}
 
 var _objects_key := ""
 
@@ -60,8 +65,18 @@ func rebuild_grid() -> void:
 		push_warning("GameMap: no layout image")
 		return
 	var t0 := Time.get_ticks_msec()
-	grid = MapGrid.from_layout(layout.get_image(), threshold)
-	print("GameMap: grid %dx%d, blocked %d, %d ms" % [grid.cols, grid.rows, grid.blocked_count(), Time.get_ticks_msec() - t0])
+	var g := MapGrid.from_layout(layout.get_image(), threshold)
+	if grid != null and grid.resource_path != "":
+		# Keep the same .tres (the scene points at it): refill it and save.
+		grid.cols = g.cols
+		grid.rows = g.rows
+		grid.threshold = g.threshold
+		grid.kinds = g.kinds
+		grid.refresh()
+		ResourceSaver.save(grid)
+	else:
+		grid = g
+	print("GameMap: grid %dx%d, rock %d, %d ms" % [grid.cols, grid.rows, grid.count_kind(MapGrid.Kind.ROCK), Time.get_ticks_msec() - t0])
 	_redraw_overlay()
 	map_changed.emit()
 
@@ -145,8 +160,8 @@ func placement_problem(o: MapObject) -> String:
 	for c in o.footprint_cells():
 		if not grid.inside(c.x, c.y):
 			return "за межами карти"
-		if not (o is Prop) and grid.is_blocked(c.x, c.y):
-			return "клітинка %d,%d: скеля / прірва" % [c.x, c.y]
+		if not (o is Prop) and not grid.can_build(c.x, c.y):
+			return "клітинка %d,%d: тут не будують (%s)" % [c.x, c.y, KIND_NAMES[grid.kind(c.x, c.y)]]
 		if occ.has(c):
 			return "клітинка %d,%d: зайнято (%s)" % [c.x, c.y, (occ[c] as Node).name]
 	return ""
@@ -163,6 +178,11 @@ func _process(_dt: float) -> void:
 		_redraw_overlay()
 		if not Engine.is_editor_hint():
 			map_changed.emit()
+
+
+## Redraw the grid overlay (after painting cell kinds).
+func refresh_overlay() -> void:
+	_redraw_overlay()
 
 
 func _redraw_overlay() -> void:
