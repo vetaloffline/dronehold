@@ -1,0 +1,57 @@
+[gd_scene format=3 uid="uid://dg5ud7x7quqfe"]
+
+[ext_resource type="Script" uid="uid://c1yxbejtsjo55" path="res://game/objects/machine_gun/machine_gun.gd" id="1_4pd4y"]
+[ext_resource type="Resource" path="res://game/objects/machine_gun/machine_gun_rig.tres" id="2_dpm8p"]
+[ext_resource type="Texture2D" uid="uid://c8hvefme8rv80" path="res://art/objects/buildings/machine_gun/machine_gun_base_shadow.png" id="3_a6ydw"]
+[ext_resource type="Texture2D" uid="uid://cummfnu0tue8e" path="res://art/objects/buildings/machine_gun/machine_gun_head_337_5.png" id="4_dqnd0"]
+[ext_resource type="Texture2D" uid="uid://4pvmdcjisvat" path="res://art/objects/buildings/machine_gun/machine_gun_base.png" id="5_i7v22"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_l4f6r"]
+blend_mode = 1
+
+[node name="MachineGun" type="Node2D" unique_id=1791091541]
+texture_filter = 4
+position = Vector2(32, 24)
+scale = Vector2(0.3, 0.3)
+script = ExtResource("1_4pd4y")
+rig = ExtResource("2_dpm8p")
+
+[node name="BaseShadow" type="Sprite2D" parent="." unique_id=2069472771]
+position = Vector2(-212, -307)
+texture = ExtResource("3_a6ydw")
+centered = false
+
+[node name="HeadShadow0" type="Sprite2D" parent="." unique_id=1974434028]
+modulate = Color(0, 0, 0, 0.35)
+position = Vector2(-28.208698, -60.757187)
+scale = Vector2(0.77, 0.77)
+texture = ExtResource("4_dqnd0")
+centered = false
+offset = Vector2(-145, -207)
+
+[node name="HeadShadow1" type="Sprite2D" parent="." unique_id=516664457]
+visible = false
+centered = false
+
+[node name="Base" type="Sprite2D" parent="." unique_id=523962379]
+position = Vector2(-212, -307)
+texture = ExtResource("5_i7v22")
+centered = false
+
+[node name="Head0" type="Sprite2D" parent="." unique_id=1571006675]
+position = Vector2(0, -216.98999)
+scale = Vector2(0.77, 0.77)
+texture = ExtResource("4_dqnd0")
+centered = false
+offset = Vector2(-145, -207)
+
+[node name="Head1" type="Sprite2D" parent="." unique_id=720438137]
+visible = false
+centered = false
+
+[node name="Fx" type="Node2D" parent="." unique_id=1109563771]
+z_index = 10
+material = SubResource("CanvasItemMaterial_l4f6r")
+
+[node name="FxTop" type="Node2D" parent="." unique_id=1666623016]
+z_index = 10

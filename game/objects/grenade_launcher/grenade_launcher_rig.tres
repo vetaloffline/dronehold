@@ -1,0 +1,56 @@
+[gd_resource type="Resource" script_class="GrenadeLauncherRig" format=3 uid="uid://d4kelus1kdabd"]
+
+[ext_resource type="Texture2D" uid="uid://1tviahb83lky" path="res://art/objects/buildings/grenade_launcher/grenade_launcher_base.png" id="1_uyqm7"]
+[ext_resource type="Texture2D" uid="uid://ctvtb2dvv40lo" path="res://art/objects/buildings/grenade_launcher/grenade_launcher_base_shadow.png" id="2_nwq11"]
+[ext_resource type="Script" uid="uid://43hp3w5u4tjp" path="res://game/objects/grenade_launcher/grenade_launcher_rig.gd" id="11_idkhn"]
+[ext_resource type="Texture2D" uid="uid://l5j8h1o7ougb" path="res://art/objects/buildings/grenade_launcher/grenade_launcher_tube_cap.png" id="12_tpyhp"]
+[ext_resource type="Texture2D" uid="uid://dh6q7e2vq6l3d" path="res://art/objects/buildings/grenade_launcher/grenade_launcher_tilt_cradle.png" id="13_jw0f8"]
+[ext_resource type="Texture2D" uid="uid://bdjthpqabkjv0" path="res://art/objects/buildings/grenade_launcher/grenade_launcher_tube_outer.png" id="14_d0rsw"]
+[ext_resource type="Texture2D" uid="uid://dsp5wn4ir5vk1" path="res://art/objects/buildings/grenade_launcher/grenade_launcher_tube_shaft.png" id="15_endpg"]
+[ext_resource type="Texture2D" uid="uid://b0vphdy131qfs" path="res://art/objects/buildings/grenade_launcher/grenade_launcher_head_000.png" id="gh00"]
+[ext_resource type="Texture2D" uid="uid://dc524gtpbghog" path="res://art/objects/buildings/grenade_launcher/grenade_launcher_head_022_5.png" id="gh01"]
+[ext_resource type="Texture2D" uid="uid://b68i1hknv72gh" path="res://art/objects/buildings/grenade_launcher/grenade_launcher_head_045.png" id="gh02"]
+[ext_resource type="Texture2D" uid="uid://4apw38bm0u7j" path="res://art/objects/buildings/grenade_launcher/grenade_launcher_head_067_5.png" id="gh03"]
+[ext_resource type="Texture2D" uid="uid://cs4xeqbphx4jg" path="res://art/objects/buildings/grenade_launcher/grenade_launcher_head_090.png" id="gh04"]
+[ext_resource type="Texture2D" uid="uid://b1d5l6qin5ma0" path="res://art/objects/buildings/grenade_launcher/grenade_launcher_head_112_5.png" id="gh05"]
+[ext_resource type="Texture2D" uid="uid://bhhjd1exdey3v" path="res://art/objects/buildings/grenade_launcher/grenade_launcher_head_135.png" id="gh06"]
+[ext_resource type="Texture2D" uid="uid://bd7k27m5kwcfk" path="res://art/objects/buildings/grenade_launcher/grenade_launcher_head_157_5.png" id="gh07"]
+[ext_resource type="Texture2D" uid="uid://bxy3yd2vhtdl4" path="res://art/objects/buildings/grenade_launcher/grenade_launcher_head_180.png" id="gh08"]
+[ext_resource type="Texture2D" uid="uid://2ahdcn8thsl5" path="res://art/objects/buildings/grenade_launcher/grenade_launcher_head_202_5.png" id="gh09"]
+[ext_resource type="Texture2D" uid="uid://dtsjxd8uj0lat" path="res://art/objects/buildings/grenade_launcher/grenade_launcher_head_225.png" id="gh10"]
+[ext_resource type="Texture2D" uid="uid://bdvvuqbmy6erk" path="res://art/objects/buildings/grenade_launcher/grenade_launcher_head_247_5.png" id="gh11"]
+[ext_resource type="Texture2D" uid="uid://dtgk42nj5i80" path="res://art/objects/buildings/grenade_launcher/grenade_launcher_head_270.png" id="gh12"]
+[ext_resource type="Texture2D" uid="uid://c0q11f5xnudte" path="res://art/objects/buildings/grenade_launcher/grenade_launcher_head_292_5.png" id="gh13"]
+[ext_resource type="Texture2D" uid="uid://cyvmenbe2jgx6" path="res://art/objects/buildings/grenade_launcher/grenade_launcher_head_315.png" id="gh14"]
+[ext_resource type="Texture2D" uid="uid://d0bby0t3sdxw8" path="res://art/objects/buildings/grenade_launcher/grenade_launcher_head_337_5.png" id="gh15"]
+
+[resource]
+script = ExtResource("11_idkhn")
+tilt_cradle = ExtResource("13_jw0f8")
+tilt_outer = ExtResource("14_d0rsw")
+tilt_shaft = ExtResource("15_endpg")
+tilt_cap = ExtResource("12_tpyhp")
+base = ExtResource("1_uyqm7")
+base_shadow = ExtResource("2_nwq11")
+heads = Array[Texture2D]([ExtResource("gh00"), ExtResource("gh01"), ExtResource("gh02"), ExtResource("gh03"), ExtResource("gh04"), ExtResource("gh05"), ExtResource("gh06"), ExtResource("gh07"), ExtResource("gh08"), ExtResource("gh09"), ExtResource("gh10"), ExtResource("gh11"), ExtResource("gh12"), ExtResource("gh13"), ExtResource("gh14"), ExtResource("gh15")])
+housing = PackedVector2Array(212, 226, 183, 241, 191, 239, 200, 239, 216, 241, 221, 240, 224, 243, 227, 243, 206, 225, 221, 249, 207, 253, 208, 250, 214, 233, 218, 267, 203, 256, 197, 252)
+muzzle = PackedVector2Array(348, 52, 334, 76, 324, 77, 311, 68, 211, 56, 130, 70, 94, 70, 89, 69, 69, 52, 106, 49, 127, 32, 144, 45, 211, 44, 271, 17, 294, 41, 304, 54)
+view_azimuths = PackedFloat32Array()
+ring = Vector2(215, 190)
+ring_h = 140.0
+map_scale = 0.27
+tuner_scale = 0.9
+head_scale = 0.85
+lift = 80.0
+view_offsets = PackedVector2Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+turn_strength = 0.0
+rot_speed = 240.0
+tolerance = 5.0
+range_px = 540.0
+fire_rate = 0.7
+damage = 6.0
+recoil = 18.0
+recoil_return = 0.3
+flash = 80.0
+demo_center = Vector2(93.3, -33)
+demo_radius = Vector2(270, 99)
