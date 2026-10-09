@@ -19,7 +19,7 @@ extends Resource
 ## Body width in a frame, px (it becomes `size_cells` on the map).
 @export var sprite_w := 1000.0:
 	set(v): sprite_w = v; emit_changed()
-## Width on the map, in cells (cell = 64 px).
+## Width on the map, in cells (cell = 32 px).
 @export_range(0.1, 3.0, 0.01) var size_cells := 0.8:
 	set(v): size_cells = v; emit_changed()
 

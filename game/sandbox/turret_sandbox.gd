@@ -62,7 +62,7 @@ func _process(dt: float) -> void:
 		_stream_acc += dt * stream_per_sec
 		while _stream_acc >= 1.0:
 			_stream_acc -= 1.0
-			_spawn_here(MapGrid.CELL.y * 0.6)
+			_spawn_here(MapGrid.CELL.y * 1.2)
 	_refresh()
 
 

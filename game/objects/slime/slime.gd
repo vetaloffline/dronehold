@@ -12,7 +12,7 @@ const SHADER := preload("res://game/objects/slime/slime.gdshader")
 		rig = v
 		_setup()
 ## Crawls this many cells, then turns around.
-@export_range(0.0, 20.0, 0.5) var walk_cells := 4.0
+@export_range(0.0, 40.0, 0.5) var walk_cells := 8.0
 ## Speed multiplier of the crawl cycle (rate).
 @export_range(0.1, 4.0, 0.05) var rate := 1.0
 ## Skin from the atlas; −1 = random.

@@ -33,7 +33,7 @@ func check(cond: bool, what: String) -> void:
 func _target() -> Vector2:
 	var map := _main.get_node("Map03") as GameMap
 	var cells := map.target_cells()
-	return map.grid.cell_center(cells[4]) if cells.size() > 4 else Vector2.ZERO
+	return map.grid.cell_center(cells[14]) if cells.size() > 14 else Vector2.ZERO
 
 
 func _mean_dist() -> float:
@@ -56,10 +56,10 @@ func _process(_dt: float) -> bool:
 		0:
 			if _frame == 2:
 				check(_swarm.sim != null and _swarm.field != null, "swarm is set up")
-				check(map.target_cells().size() == 9, "core gives 9 target cells")
+				check(map.target_cells().size() == 36, "core gives 36 target cells (6×6)")
 				check(map.spawn_points().size() >= 1, "map has spawn points")
 				check(_swarm._spawn_cells.size() == map.spawn_points().size(), "every spawn point has a reachable cell nearby")
-				_swarm.speed_cells = 3.0
+				_swarm.speed_cells = 6.0
 				_swarm.target_count = 50
 				_swarm.spawn_per_sec = 200.0
 			if _frame == 150:

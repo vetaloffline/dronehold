@@ -1,43 +1,88 @@
 class_name MainMenu
 extends Control
-## Start screen: pick what to run.
+## Start screen. Background world (picture + flying drones) covers the screen like CSS «cover»;
+## menu on the left, sound toggle bottom right. Buttons live in the scene (Menu/Buttons): each has
+## metadata `scene` (what to open) and optionally `turret` (which turret the test range starts with).
+## Add a button in the editor: duplicate one (Ctrl+D), change its text and metadata.
 
-## [button, scene, turret for the test range or ""].
-const SCENES := [
-	["Гра: карта map_03", "res://game/main.tscn", ""],
-	["Тест кулемета: клік — слизень", "res://game/sandbox/turret_sandbox.tscn", "Кулемет"],
-	["Тест гранатомета: клік — слизень", "res://game/sandbox/turret_sandbox.tscn", "Гранатомет"],
-]
 const MENU := "res://game/ui/main_menu.tscn"
+const CLICK := preload("res://art/objects/ui/main_menu/ui_click.wav")
+## Background picture size, px (menu_bg.webp).
+const BG_SIZE := Vector2(1672, 941)
+## Which part of the picture stays visible when the screen is narrower / wider: 0 = left, 1 = right.
+const BG_ALIGN := Vector2(0.7, 0.5)
+const MENU_LEFT := 70.0
+
+@onready var _world: Node2D = $World
+@onready var _menu: Control = $Menu
+@onready var _sound: TextureButton = $Sound
+@onready var _version: Label = $Version
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
-	var bg := ColorRect.new()
-	bg.color = Color(0.07, 0.05, 0.1)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
-	var box := VBoxContainer.new()
-	box.set_anchors_preset(Control.PRESET_CENTER)
-	box.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	box.grow_vertical = Control.GROW_DIRECTION_BOTH
-	box.add_theme_constant_override("separation", 24)
-	add_child(box)
-	var title := Label.new()
-	title.text = "Dronehold"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 64)
-	box.add_child(title)
-	for s in SCENES:
-		var b := Button.new()
-		b.text = s[0]
-		b.custom_minimum_size = Vector2(560, 90)
-		b.add_theme_font_size_override("font_size", 32)
-		b.pressed.connect(func() -> void:
-			if s[2] != "":
-				TurretSandbox.start_kind = s[2]
-			get_tree().change_scene_to_file(s[1]))
-		box.add_child(b)
+	Settings.apply()
+	var ver := str(ProjectSettings.get_setting("application/config/version", ""))
+	_version.text = "v" + (ver if ver != "" else "0.1")  # empty until set in Project Settings
+	for b in $Menu/Buttons.get_children():
+		if b is Button:
+			_juice(b)
+			b.pressed.connect(_open.bind(b))
+	_sound.button_pressed = not Settings.sound_on()
+	_sound.toggled.connect(func(muted: bool) -> void:
+		Settings.set_sound_on(not muted)
+		click())
+	_juice(_sound)
+	resized.connect(_layout)
+	_layout()
+
+
+func _open(b: Button) -> void:
+	click()
+	if b.has_meta("turret"):
+		TurretSandbox.start_kind = b.get_meta("turret")
+	get_tree().change_scene_to_file(b.get_meta("scene"))
+
+
+## Background covers the whole screen; the menu keeps clear of a phone notch (safe area).
+func _layout() -> void:
+	var k := maxf(size.x / BG_SIZE.x, size.y / BG_SIZE.y)
+	_world.scale = Vector2(k, k)
+	_world.position = (size - BG_SIZE * k) * BG_ALIGN
+	_menu.offset_left = MENU_LEFT + _safe_left()
+	_menu.offset_right = _menu.offset_left + _menu.get_combined_minimum_size().x
+
+
+## Left inset of the display safe area, in canvas px (0 on PC).
+func _safe_left() -> float:
+	var win := DisplayServer.window_get_size()
+	if win.x <= 0:
+		return 0.0
+	var safe := DisplayServer.get_display_safe_area()
+	var screen := DisplayServer.screen_get_size()
+	if safe.size.x <= 0 or screen.x != win.x:
+		return 0.0  # windowed: no notch
+	return safe.position.x * size.x / win.x
+
+
+## Hover / press feel: slightly brighter on hover, shrinks a bit while held.
+func _juice(c: BaseButton) -> void:
+	c.button_down.connect(func() -> void:
+		c.pivot_offset = c.size * 0.5
+		c.create_tween().tween_property(c, "scale", Vector2.ONE * 0.96, 0.06))
+	c.button_up.connect(func() -> void:
+		c.create_tween().tween_property(c, "scale", Vector2.ONE, 0.08))
+	if c is TextureButton:
+		c.mouse_entered.connect(func() -> void: c.self_modulate = Color(1.15, 1.15, 1.15))
+		c.mouse_exited.connect(func() -> void: c.self_modulate = Color.WHITE)
+
+
+## UI click; the player lives on the tree root, so it is not cut when the scene changes.
+func click() -> void:
+	var p := AudioStreamPlayer.new()
+	p.stream = CLICK
+	get_tree().root.add_child(p)
+	p.finished.connect(p.queue_free)
+	p.play()
 
 
 ## «Меню» button for other scenes (top right corner of a CanvasLayer).

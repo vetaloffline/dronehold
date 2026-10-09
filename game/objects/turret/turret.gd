@@ -43,6 +43,10 @@ func get_map_scale() -> float:
 	return r.map_scale if r else 1.0
 
 
+func get_footprint() -> Vector2i:
+	return Vector2i(2, 2)
+
+
 func get_path_cost() -> float:
 	return 8.0
 

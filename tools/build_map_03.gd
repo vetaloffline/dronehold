@@ -10,7 +10,10 @@ const OUT := "res://game/maps/map_03/map_03.tscn"
 const LAYOUT := "res://art/maps/map_03/map_03_layout.png"
 const GROUND_DIR := "res://game/maps/map_03/ground/"
 const CHUNK := 2048
-const VEIN_SLOT := Vector2i(3, -1)
+const VEIN_SLOT := Vector2i(6, -2)
+const GRID_OUT := "res://game/maps/map_03/map_03_grid.tres"
+## map_03.json (old HTML editor) counts cells of 64×48; the game grid is 32×24.
+const JSON_CELL_K := 2
 const SCENES := {
 	"core": "res://game/objects/core/core.tscn",
 	"vein": "res://game/objects/crystal_vein/crystal_vein.tscn",
@@ -20,8 +23,8 @@ const SCENES := {
 	"spawn": "res://game/core/spawn_point.tscn",
 	"prop": "res://game/core/prop.tscn",
 }
-const FOOT := {"core": Vector2i(3, 3), "vein": Vector2i(3, 3), "spawn": Vector2i(1, 1), "turret": Vector2i(1, 1),
-	"launcher": Vector2i(1, 1), "drill": Vector2i(1, 1), "wall": Vector2i(1, 1), "relay": Vector2i(1, 1)}
+const FOOT := {"core": Vector2i(6, 6), "vein": Vector2i(6, 6), "spawn": Vector2i(2, 2), "turret": Vector2i(2, 2),
+	"launcher": Vector2i(2, 2), "drill": Vector2i(2, 2), "wall": Vector2i(2, 2), "relay": Vector2i(2, 2)}
 
 var grid: MapGrid
 var occ := {}
@@ -35,6 +38,8 @@ func _init() -> void:
 	root.name = "Map03"
 	root.layout = load(LAYOUT)
 	root.rebuild_grid()
+	ResourceSaver.save(root.grid, GRID_OUT)
+	root.grid = load(GRID_OUT)
 	grid = root.grid
 	_add_ground(root)
 	_add_rot(root)
@@ -198,8 +203,12 @@ func _from_json(root: GameMap, path: String) -> void:
 		push_error("build_map_03: can not read %s" % path)
 		return
 	for o in j.get("objects", []):
-		_place(root, String(o["type"]), Vector2i(int(o["cell"][0]), int(o["cell"][1])))
+		_place(root, String(o["type"]), _json_cell(o))
 	for o in j.get("test_buildings", []):
-		_place(root, String(o["type"]), Vector2i(int(o["cell"][0]), int(o["cell"][1])))
+		_place(root, String(o["type"]), _json_cell(o))
 	for o in j.get("props", []):
-		_place(root, "prop", Vector2i(int(o["cell"][0]), int(o["cell"][1])), {"kind": String(o["prop"]), "decor": not o.get("blocks", true)})
+		_place(root, "prop", _json_cell(o), {"kind": String(o["prop"]), "decor": not o.get("blocks", true)})
+
+
+func _json_cell(o: Dictionary) -> Vector2i:
+	return Vector2i(int(o["cell"][0]), int(o["cell"][1])) * JSON_CELL_K

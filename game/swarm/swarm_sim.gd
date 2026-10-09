@@ -38,9 +38,14 @@ var cell_sum_y := PackedFloat32Array()
 var order := PackedInt32Array()
 
 ## Tunables (set by Swarm).
-var cell_capacity := 2.0
+## Slimes per cell before pushing out; 0 = auto: as many bodies as fit in a cell.
+var cell_capacity := 0.0
 var push_strength := 1.0
-var spread_strength := 1.0
+var spread_strength := 40.0
+## Physical body: share of the picture width (0.8 = pictures of neighbours overlap by 20 % — a pile). Neighbours keep body width apart.
+var body := 0.8
+## Pull towards neighbours ahead that are up to 2× the spacing away (1/s): the crowd keeps together.
+var cohesion := 3.0
 
 var reached_total := 0
 var killed_total := 0
@@ -222,9 +227,20 @@ func step(dt: float, field: FlowField, grid: MapGrid, crawl: SlimeCrawl, width_p
 	# wrong row compared with MapGrid.cell_at().
 	var cw_px := MapGrid.CELL.x
 	var ch_px := MapGrid.CELL.y
-	var push_k := push_strength * MapGrid.CELL.x * dt / maxf(0.1, cell_capacity)
-	var spread_k := spread_strength * width_px * dt / maxf(0.1, cell_capacity)
-	var jitter_k := spread_strength * width_px * dt
+	# Spring inside a cell: slimes settle `spacing` apart (y counts 1/0.75: the ground is squashed).
+	var spacing := maxf(1.0, width_px * body)
+	# Auto capacity: bodies of `spacing` on the squashed ground, in one cell.
+	var cap := cell_capacity if cell_capacity > 0.0 else MapGrid.CELL.x * MapGrid.CELL.y / (spacing * spacing * 0.75)
+	var push_k := push_strength * MapGrid.CELL.x * dt / cap
+	var spring_k := minf(1.0, spread_strength * dt)
+	# Cohesion: a neighbour a bit too far (up to 2× the spacing) pulls this slime in, weaker.
+	var glue := cohesion / maxf(0.1, spread_strength)
+	# Wanted distance to the centroid of m others: spacing·(1+√m)/2.
+	var want_lut := PackedFloat32Array()
+	want_lut.resize(65)
+	for m in 65:
+		want_lut[m] = spacing * 0.5 * (1.0 + sqrt(float(m)))
+	var jitter_k := width_px * dt
 	var phase_k := dt / period
 	var smax := SlimeCrawl.SAMPLES - 1
 	var sn := float(SlimeCrawl.SAMPLES)
@@ -271,25 +287,114 @@ func step(dt: float, field: FlowField, grid: MapGrid, crawl: SlimeCrawl, width_p
 		var adv := (dist_lut[s1] - dist_lut[s0] + wrap) * width_px + slide_dt * rt
 		var vx := dirs[ci * 2] * adv
 		var vy := dirs[ci * 2 + 1] * adv
-		# Pressure: out of denser neighbour cells, and away from the own cell's centre.
+		# Pressure, only where the crowd is over capacity: out of an overfull cell into a less full
+		# neighbour. Below capacity slimes pack freely (a pile, not a grid).
 		var cnt := counts[ci]
 		if cnt > 0:
-			var d_l := counts[ci - 1] if c > 0 else cnt
-			var d_r := counts[ci + 1] if c < nc_max else cnt
-			var d_u := counts[ci - w] if r > 0 else cnt
-			var d_d := counts[ci + w] if r < nr_max else cnt
-			vx += (d_l - d_r) * push_k
-			vy += (d_u - d_d) * push_k
+			var e := maxf(0.0, cnt - cap)
+			var e_l := maxf(0.0, counts[ci - 1] - cap) if c > 0 else e
+			var e_r := maxf(0.0, counts[ci + 1] - cap) if c < nc_max else e
+			var e_u := maxf(0.0, counts[ci - w] - cap) if r > 0 else e
+			var e_d := maxf(0.0, counts[ci + w] - cap) if r < nr_max else e
+			vx += (e_l - e_r) * push_k
+			vy += (e_u - e_d) * push_k
+			# Spacing spring: keep `spacing` from the others — in the own cell (their centroid
+			# without this slime) and in the 4 neighbour cells (their centroids). A lone neighbour
+			# is exact pair spacing; a group of m counts as wider (spacing·(1+√m)/2). Closer — pushed out,
+			# up to 2× farther and ahead — pulled in (cohesion).
+			var sx := 0.0
+			var sy := 0.0
+			# Cohesion pulls only towards neighbours ahead (along the arrow): the ones behind catch up,
+			# the leaders are not held back (a pile at a gap would never get through).
+			var fdx := dirs[ci * 2]
+			var fdy := dirs[ci * 2 + 1]
+			# Unrolled (GDScript loops and calls cost more than the maths): own cell, then L R U D.
 			if cnt > 1:
-				var ox := x - sum_x[ci] / cnt
-				var oy := y - sum_y[ci] / cnt
+				var m := cnt - 1
+				var ox := x - (sum_x[ci] - x) / m
+				var oy := (y - (sum_y[ci] - y) / m) / 0.75
 				var ol := sqrt(ox * ox + oy * oy)
-				if ol > 0.001:
-					var k := (cnt - 1) * spread_k / ol
-					vx += ox * k
-					vy += oy * k
-				else:
-					vx += (seeds[i] - 0.5) * jitter_k
+				var want := want_lut[mini(m, 64)]
+				if ol < 0.001:
+					sx += (seeds[i] - 0.5) * jitter_k
+				elif ol < want:
+					var k := (want - ol) / ol
+					sx += ox * k
+					sy += oy * k * 0.75
+				elif ol < want * 2.0 and ox * fdx + oy * fdy < 0.0:
+					var k := (want - ol) / ol * glue
+					sx += ox * k
+					sy += oy * k * 0.75
+			if c > 0:
+				var m := counts[ci - 1]
+				if m > 0:
+					var ox := x - sum_x[ci - 1] / m
+					var oy := (y - sum_y[ci - 1] / m) / 0.75
+					var ol := sqrt(ox * ox + oy * oy)
+					var want := want_lut[mini(m, 64)]
+					if ol < 0.001:
+						sx += (seeds[i] - 0.5) * jitter_k
+					elif ol < want:
+						var k := (want - ol) / ol
+						sx += ox * k
+						sy += oy * k * 0.75
+					elif ol < want * 2.0 and ox * fdx + oy * fdy < 0.0:
+						var k := (want - ol) / ol * glue
+						sx += ox * k
+						sy += oy * k * 0.75
+			if c < nc_max:
+				var m := counts[ci + 1]
+				if m > 0:
+					var ox := x - sum_x[ci + 1] / m
+					var oy := (y - sum_y[ci + 1] / m) / 0.75
+					var ol := sqrt(ox * ox + oy * oy)
+					var want := want_lut[mini(m, 64)]
+					if ol < 0.001:
+						sx += (seeds[i] - 0.5) * jitter_k
+					elif ol < want:
+						var k := (want - ol) / ol
+						sx += ox * k
+						sy += oy * k * 0.75
+					elif ol < want * 2.0 and ox * fdx + oy * fdy < 0.0:
+						var k := (want - ol) / ol * glue
+						sx += ox * k
+						sy += oy * k * 0.75
+			if r > 0:
+				var m := counts[ci - w]
+				if m > 0:
+					var ox := x - sum_x[ci - w] / m
+					var oy := (y - sum_y[ci - w] / m) / 0.75
+					var ol := sqrt(ox * ox + oy * oy)
+					var want := want_lut[mini(m, 64)]
+					if ol < 0.001:
+						sx += (seeds[i] - 0.5) * jitter_k
+					elif ol < want:
+						var k := (want - ol) / ol
+						sx += ox * k
+						sy += oy * k * 0.75
+					elif ol < want * 2.0 and ox * fdx + oy * fdy < 0.0:
+						var k := (want - ol) / ol * glue
+						sx += ox * k
+						sy += oy * k * 0.75
+			if r < nr_max:
+				var m := counts[ci + w]
+				if m > 0:
+					var ox := x - sum_x[ci + w] / m
+					var oy := (y - sum_y[ci + w] / m) / 0.75
+					var ol := sqrt(ox * ox + oy * oy)
+					var want := want_lut[mini(m, 64)]
+					if ol < 0.001:
+						sx += (seeds[i] - 0.5) * jitter_k
+					elif ol < want:
+						var k := (want - ol) / ol
+						sx += ox * k
+						sy += oy * k * 0.75
+					elif ol < want * 2.0 and ox * fdx + oy * fdy < 0.0:
+						var k := (want - ol) / ol * glue
+						sx += ox * k
+						sy += oy * k * 0.75
+			vx += sx * spring_k
+			vy += sy * spring_k
 		# Do not step into cliffs / pits: try both axes, then each alone.
 		var nx := x + vx
 		var ny := y + vy
@@ -305,6 +410,14 @@ func step(dt: float, field: FlowField, grid: MapGrid, crawl: SlimeCrawl, width_p
 				ny = y
 		lpx[i] = nx
 		lpy[i] = ny
+		# The arrays are float32: a slime right at a wall (575.99997) rounds onto it (576.0 =
+		# the rock cell) and stays stuck there. Check the stored value; if it landed in a wall,
+		# stay where it was (that position was valid).
+		var sc := clampi(int(lpx[i] / cw_px), 0, nc_max)
+		var sr := clampi(int(lpy[i] / ch_px), 0, nr_max)
+		if blocked[sr * w + sc] == 1:
+			lpx[i] = x
+			lpy[i] = y
 		if vx > 0.05:
 			lface[i] = 1.0
 		elif vx < -0.05:

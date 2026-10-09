@@ -32,15 +32,23 @@ const DEFAULT_RIG := preload("res://game/objects/slime/slime_rig.tres")
 
 @export_group("Movement")
 ## Mean speed, cells/s. The crawl cycle speeds up to match (rate = speed / rig.avg_speed()).
-@export_range(0.05, 5.0, 0.01, "or_greater") var speed_cells := 0.36
+@export_range(0.05, 5.0, 0.01, "or_greater") var speed_cells := 0.72
 ## ± share of random speed difference between slimes.
 @export_range(0.0, 0.6, 0.01) var speed_spread := 0.25
-## Slimes per cell before the crowd starts pushing outwards.
-@export_range(0.25, 40.0, 0.25) var cell_capacity := 2.0
-## Push out of crowded cells (cells/s at one extra cell of density).
+## Slimes per cell before the crowd starts pushing outwards (below it they pile up freely).
+## 0 = auto: as many bodies (see `body`) as fit in a cell.
+@export_range(0.0, 40.0, 0.25) var cell_capacity := 0.0
+## Push out of overfull cells (cells/s per slime over capacity).
 @export_range(0.0, 5.0, 0.05) var push_strength := 1.0
-## Spreading inside a crowded cell (slime widths/s).
-@export_range(0.0, 5.0, 0.05) var spread_strength := 1.0
+## How fast slimes in one cell settle to their spacing (1/s; higher = stiffer).
+@export_range(0.0, 60.0, 0.5) var spread_strength := 40.0
+## Physical body of a slime, share of the picture width: neighbours keep this far apart, so with
+## 0.8 their pictures overlap by 20 % — a pile. 1 = pictures just touch. Below ~0.7 the simple
+## physics lets slimes sink into each other (measured: 0.5 → neighbours 0.2–0.4 width apart).
+@export_range(0.2, 1.2, 0.01) var body := 0.8
+## How strongly slimes pull towards neighbours ahead, up to 2× the spacing away (1/s; 0 = off): the crowd
+## gathers into a pile instead of keeping the distance it was spawned with.
+@export_range(0.0, 20.0, 0.5) var cohesion := 3.0
 
 ## Slimes stand still (targets for testing); they are still drawn and can be shot.
 @export var frozen := false
@@ -132,6 +140,8 @@ func _apply_tunables() -> void:
 	sim.cell_capacity = cell_capacity
 	sim.push_strength = push_strength
 	sim.spread_strength = spread_strength
+	sim.body = body
+	sim.cohesion = cohesion
 
 
 func _process(dt: float) -> void:

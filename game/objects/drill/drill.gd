@@ -47,7 +47,7 @@ var _u := 1.0
 
 
 func get_footprint() -> Vector2i:
-	return Vector2i(1, 1)
+	return Vector2i(2, 2)
 
 
 func get_map_shift() -> Vector2:
@@ -61,7 +61,7 @@ func get_map_scale() -> float:
 
 
 func get_clear_radius() -> float:
-	return 2.0
+	return 4.0
 
 
 func get_path_cost() -> float:
@@ -103,7 +103,7 @@ func cell_for_point(p: Vector2) -> Vector2i:
 		for n in par.get_children():
 			if n is CrystalVein and (n as CrystalVein).rig:
 				var v := n as CrystalVein
-				if p.distance_to(_slot_point(v)) < MapGrid.CELL.y * 0.75:
+				if p.distance_to(_slot_point(v)) < MapGrid.CELL.y * 1.5:
 					return v.drill_slot_cell()
 	return super(p)
 
@@ -192,7 +192,7 @@ static func _seg_shadow(pj: Vector2, qj: Vector2, ps: Vector2, qs: Vector2, k: f
 
 
 static func _ease(x: float) -> float:
-	return 2.0 * x * x if x < 0.5 else 1.0 - pow(-2.0 * x + 2.0, 2.0) / 2.0
+	return 4.0 * x * x if x < 0.5 else 1.0 - pow(-2.0 * x + 2.0, 2.0) / 2.0
 
 
 ## Phase index (0 lower, 1 charge, 2 fire, 3 cool, 4 raise, 5 wait), share 0..1, elapsed s.

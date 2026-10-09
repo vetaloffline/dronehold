@@ -1,8 +1,8 @@
 class_name SwarmView
 extends RefCounted
 ## Draws the swarm with MultiMesh: one MultiMeshInstance2D per horizontal band of the map
-## (half a grid row). Bands are children of the Y-sorted World, so slimes sort against buildings
-## by band; inside a band instances are written bottom-last. Off-screen bands are hidden and not
+## (a grid row / BANDS_PER_ROW; 24 px with 32×24 cells — the same band height as before).
+## Bands are children of the Y-sorted World, so slimes sort against buildings by band; inside a band instances are written bottom-last. Off-screen bands are hidden and not
 ## filled — only visible slimes cost render work. One draw call per visible band.
 ##
 ## Buffer per instance (MultiMesh TRANSFORM_2D + custom data, 12 floats; layout checked against
@@ -13,8 +13,10 @@ extends RefCounted
 
 const STRIDE := 12
 const SUB_BUCKETS := 6
+## Bands per grid row: more = finer sorting against buildings, but one draw call more per band.
+const BANDS_PER_ROW := 1
 
-var band_h := MapGrid.CELL.y * 0.5
+var band_h := MapGrid.CELL.y / BANDS_PER_ROW
 var bands := 0
 var _body: Array[MultiMeshInstance2D] = []
 var _shadow: Array[MultiMeshInstance2D] = []
@@ -105,13 +107,12 @@ func update(sim: SwarmSim, crawl: SlimeCrawl, rig: SlimeRig, view: Rect2) -> voi
 	var sh_x := rig.shadow_x * w
 	var sh_y := rig.shadow_y * w
 	var sub_h := band_h / SUB_BUCKETS
-	# Two bands per grid row.
-	var r0 := b0 / 2
-	var r1 := mini(sim.rows - 1, b1 / 2)
+	var r0 := b0 / BANDS_PER_ROW
+	var r1 := mini(sim.rows - 1, b1 / BANDS_PER_ROW)
 	for r in range(r0, r1 + 1):
-		# Collect visible slots of this row, split into its two bands and sub-buckets by y.
+		# Collect visible slots of this row, split into its bands and sub-buckets by y.
 		var lists: Array[PackedInt32Array] = []
-		for q in SUB_BUCKETS * 2:
+		for q in SUB_BUCKETS * BANDS_PER_ROW:
 			lists.append(PackedInt32Array())
 		var row_top := r * MapGrid.CELL.y
 		for c in range(c0, c1 + 1):
@@ -120,10 +121,10 @@ func update(sim: SwarmSim, crawl: SlimeCrawl, rig: SlimeRig, view: Rect2) -> voi
 				var i := sim.order[o]
 				if i >= sim.count:
 					continue
-				var q := clampi(int((sim.py[i] - row_top) / sub_h), 0, SUB_BUCKETS * 2 - 1)
+				var q := clampi(int((sim.py[i] - row_top) / sub_h), 0, SUB_BUCKETS * BANDS_PER_ROW - 1)
 				lists[q].append(i)
-		for half in 2:
-			var b := r * 2 + half
+		for half in BANDS_PER_ROW:
+			var b := r * BANDS_PER_ROW + half
 			if b < b0 or b > b1:
 				continue
 			var n := 0

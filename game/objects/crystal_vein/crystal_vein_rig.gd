@@ -12,8 +12,8 @@ extends Resource
 ## Vein px → map px.
 @export_range(0.02, 1.0, 0.005) var map_scale := 0.24:
 	set(v): map_scale = v; emit_changed()
-## Shift of the ground point from the footprint centre, cells.
-@export var map_shift := Vector2(0.0, 1.4):
+## Shift of the ground point from the footprint centre, cells (32×24).
+@export var map_shift := Vector2(0.0, 2.8):
 	set(v): map_shift = v; emit_changed()
 
 @export_group("Monolith glow")
