@@ -1,0 +1,92 @@
+[gd_scene load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://game/objects/drill/drill.gd" id="1_drill"]
+[ext_resource type="Resource" path="res://game/objects/drill/drill_rig.tres" id="2_rig"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/drill/drill_body_shadow.png" id="3_bshadow"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/drill/drill_body.png" id="4_body"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/drill/drill_arm_1.png" id="5_arm1"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/drill/drill_arm_2.png" id="6_arm2"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/drill/drill_arm_3.png" id="7_arm3"]
+[ext_resource type="Shader" path="res://game/objects/drill/drill_silhouette.gdshader" id="8_sil"]
+
+[sub_resource type="CanvasItemMaterial" id="Add"]
+blend_mode = 1
+
+[sub_resource type="ShaderMaterial" id="Sil1"]
+shader = ExtResource("8_sil")
+
+[sub_resource type="ShaderMaterial" id="Sil2"]
+shader = ExtResource("8_sil")
+
+[sub_resource type="ShaderMaterial" id="Sil3"]
+shader = ExtResource("8_sil")
+
+[node name="Drill" type="Node2D"]
+texture_filter = 4
+script = ExtResource("1_drill")
+rig = ExtResource("2_rig")
+
+[node name="BodyShadow" type="Sprite2D" parent="."]
+z_index = -1
+texture = ExtResource("3_bshadow")
+centered = false
+offset = Vector2(-1078, -936)
+
+[node name="ArmShadow" type="CanvasGroup" parent="."]
+self_modulate = Color(1, 1, 1, 0.35)
+z_index = -1
+
+[node name="Seg1" type="Sprite2D" parent="ArmShadow"]
+material = SubResource("Sil1")
+texture = ExtResource("5_arm1")
+centered = false
+offset = Vector2(-615, -140)
+
+[node name="Seg2" type="Sprite2D" parent="ArmShadow"]
+material = SubResource("Sil2")
+texture = ExtResource("6_arm2")
+centered = false
+offset = Vector2(-450, -405)
+
+[node name="Seg3" type="Sprite2D" parent="ArmShadow"]
+material = SubResource("Sil3")
+texture = ExtResource("7_arm3")
+centered = false
+offset = Vector2(-308, -608)
+
+[node name="Body" type="Sprite2D" parent="."]
+texture = ExtResource("4_body")
+centered = false
+offset = Vector2(-1078, -936)
+
+[node name="HotSpot" type="Node2D" parent="."]
+material = SubResource("Add")
+
+[node name="Arms" type="Node2D" parent="."]
+
+[node name="Shoulder" type="Node2D" parent="Arms"]
+position = Vector2(-78, -711)
+
+[node name="Elbow" type="Node2D" parent="Arms/Shoulder"]
+position = Vector2(-315, 135)
+
+[node name="Wrist" type="Node2D" parent="Arms/Shoulder/Elbow"]
+position = Vector2(-142, 203)
+
+[node name="Arm3" type="Sprite2D" parent="Arms/Shoulder/Elbow/Wrist"]
+texture = ExtResource("7_arm3")
+centered = false
+offset = Vector2(-308, -608)
+
+[node name="Arm2" type="Sprite2D" parent="Arms/Shoulder/Elbow"]
+texture = ExtResource("6_arm2")
+centered = false
+offset = Vector2(-450, -405)
+
+[node name="Arm1" type="Sprite2D" parent="Arms/Shoulder"]
+texture = ExtResource("5_arm1")
+centered = false
+offset = Vector2(-615, -140)
+
+[node name="Fx" type="Node2D" parent="."]
+material = SubResource("Add")

@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="MachineGunRig" format=3 uid="uid://cl8l2vdvob31m"]
+
+[ext_resource type="Texture2D" uid="uid://4pvmdcjisvat" path="res://art/objects/buildings/machine_gun/machine_gun_base.png" id="1_base"]
+[ext_resource type="Texture2D" uid="uid://c8hvefme8rv80" path="res://art/objects/buildings/machine_gun/machine_gun_base_shadow.png" id="2_bsh"]
+[ext_resource type="Texture2D" uid="uid://d4igsvl5b1cvq" path="res://art/objects/buildings/machine_gun/machine_gun_head_000.png" id="h00"]
+[ext_resource type="Texture2D" uid="uid://b1r2lxf1aibwb" path="res://art/objects/buildings/machine_gun/machine_gun_head_022_5.png" id="h01"]
+[ext_resource type="Texture2D" uid="uid://beu2pv745j7qh" path="res://art/objects/buildings/machine_gun/machine_gun_head_045.png" id="h02"]
+[ext_resource type="Texture2D" uid="uid://v4bja1yfcmen" path="res://art/objects/buildings/machine_gun/machine_gun_head_067_5.png" id="h03"]
+[ext_resource type="Texture2D" uid="uid://dkc8iak80wwsq" path="res://art/objects/buildings/machine_gun/machine_gun_head_090.png" id="h04"]
+[ext_resource type="Texture2D" uid="uid://bcbgtcsfmvvp1" path="res://art/objects/buildings/machine_gun/machine_gun_head_112_5.png" id="h05"]
+[ext_resource type="Texture2D" uid="uid://8l6vr8tprab2" path="res://art/objects/buildings/machine_gun/machine_gun_head_135.png" id="h06"]
+[ext_resource type="Texture2D" uid="uid://3kynpuvsp1lu" path="res://art/objects/buildings/machine_gun/machine_gun_head_157_5.png" id="h07"]
+[ext_resource type="Texture2D" uid="uid://cjwuk1egrxv6v" path="res://art/objects/buildings/machine_gun/machine_gun_head_180.png" id="h08"]
+[ext_resource type="Texture2D" uid="uid://bfy5aeepmcllk" path="res://art/objects/buildings/machine_gun/machine_gun_head_202_5.png" id="h09"]
+[ext_resource type="Texture2D" uid="uid://nlq7nffkumbb" path="res://art/objects/buildings/machine_gun/machine_gun_head_225.png" id="h10"]
+[ext_resource type="Texture2D" uid="uid://d2d7svonk86s7" path="res://art/objects/buildings/machine_gun/machine_gun_head_247_5.png" id="h11"]
+[ext_resource type="Texture2D" uid="uid://die57gk7ix8s2" path="res://art/objects/buildings/machine_gun/machine_gun_head_270.png" id="h12"]
+[ext_resource type="Texture2D" uid="uid://4s7xfd3b85at" path="res://art/objects/buildings/machine_gun/machine_gun_head_292_5.png" id="h13"]
+[ext_resource type="Texture2D" uid="uid://c0yfu3fq8bvhq" path="res://art/objects/buildings/machine_gun/machine_gun_head_315.png" id="h14"]
+[ext_resource type="Texture2D" uid="uid://cummfnu0tue8e" path="res://art/objects/buildings/machine_gun/machine_gun_head_337_5.png" id="h15"]
+[ext_resource type="Script" uid="uid://cfe0abxdpmq5c" path="res://game/objects/machine_gun/machine_gun_rig.gd" id="s_rig"]
+
+[resource]
+script = ExtResource("s_rig")
+base = ExtResource("1_base")
+base_shadow = ExtResource("2_bsh")
+heads = Array[Texture2D]([ExtResource("h00"), ExtResource("h01"), ExtResource("h02"), ExtResource("h03"), ExtResource("h04"), ExtResource("h05"), ExtResource("h06"), ExtResource("h07"), ExtResource("h08"), ExtResource("h09"), ExtResource("h10"), ExtResource("h11"), ExtResource("h12"), ExtResource("h13"), ExtResource("h14"), ExtResource("h15")])
+housing = PackedVector2Array(120, 189, 141, 188, 158, 182, 178, 166, 212, 137, 231, 159, 267, 176, 279, 193, 297, 189, 281, 203, 253, 228, 234, 230, 206, 244, 195, 228, 165, 225, 145, 207)
+muzzle = PackedVector2Array(361, 194, 393, 296, 381, 323, 328, 366, 207, 316, 102, 370, 43, 328, 23, 297, 56, 195, 17, 119, 48, 83, 81, 76, 212, 101, 312, 70, 365, 83, 404, 120)
+view_azimuths = PackedFloat32Array(1.6, 29.6, 40.1, 60.7, 91.2, 114.6, 137.8, 151.5, 178.1, 203, 223.3, 233.2, 271.8, 298.9, 316.6, 335.8)
+view_offsets = PackedVector2Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+rot_speed = 550.0

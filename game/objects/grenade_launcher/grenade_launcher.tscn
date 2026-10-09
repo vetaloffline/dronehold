@@ -1,0 +1,54 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/objects/grenade_launcher/grenade_launcher.gd" id="1_qrpeo"]
+[ext_resource type="Resource" path="res://game/objects/grenade_launcher/grenade_launcher_rig.tres" id="2_erqjw"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_hltum"]
+blend_mode = 1
+
+[node name="GrenadeLauncher" type="Node2D" unique_id=145998001]
+texture_filter = 4
+script = ExtResource("1_qrpeo")
+rig = ExtResource("2_erqjw")
+
+[node name="BaseShadow" type="Sprite2D" parent="." unique_id=1590700797]
+centered = false
+
+[node name="HeadShadow0" type="Sprite2D" parent="." unique_id=476036182]
+centered = false
+
+[node name="HeadShadow1" type="Sprite2D" parent="." unique_id=317748116]
+centered = false
+
+[node name="CradleShadow" type="Sprite2D" parent="." unique_id=580368558]
+centered = false
+
+[node name="Base" type="Sprite2D" parent="." unique_id=518752285]
+centered = false
+
+[node name="Head0" type="Sprite2D" parent="." unique_id=2883117]
+centered = false
+
+[node name="Head1" type="Sprite2D" parent="." unique_id=287736557]
+centered = false
+
+[node name="Cradle" type="Sprite2D" parent="." unique_id=1683405665]
+centered = false
+
+[node name="Tube" type="Node2D" parent="." unique_id=161683301]
+
+[node name="Shaft" type="Sprite2D" parent="Tube" unique_id=1186722890]
+centered = false
+
+[node name="Cap" type="Sprite2D" parent="Tube" unique_id=1427861023]
+centered = false
+
+[node name="Outer" type="Sprite2D" parent="Tube" unique_id=1159275489]
+centered = false
+
+[node name="Fx" type="Node2D" parent="." unique_id=1743237034]
+z_index = 10
+material = SubResource("CanvasItemMaterial_hltum")
+
+[node name="FxTop" type="Node2D" parent="." unique_id=176431911]
+z_index = 10

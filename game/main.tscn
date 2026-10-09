@@ -1,0 +1,19 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://game/main.gd" id="1_main"]
+[ext_resource type="PackedScene" path="res://game/maps/map_03/map_03.tscn" id="2_map"]
+[ext_resource type="Script" path="res://game/core/map_camera.gd" id="3_cam"]
+[ext_resource type="Script" path="res://game/ui/debug_hud.gd" id="4_hud"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="Map03" parent="." instance=ExtResource("2_map")]
+
+[node name="Camera" type="Camera2D" parent="." node_paths=PackedStringArray("map")]
+script = ExtResource("3_cam")
+map = NodePath("../Map03")
+
+[node name="DebugHud" type="CanvasLayer" parent="." node_paths=PackedStringArray("swarm")]
+script = ExtResource("4_hud")
+swarm = NodePath("../Map03/Swarm")

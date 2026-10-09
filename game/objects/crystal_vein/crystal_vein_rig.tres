@@ -1,0 +1,62 @@
+[gd_resource type="Resource" script_class="CrystalVeinRig" format=3 uid="uid://ceob7mm1xl2by"]
+
+[ext_resource type="Script" uid="uid://o2s4r30k7kkv" path="res://game/objects/crystal_vein/crystal_vein_rig.gd" id="1_rig"]
+[ext_resource type="Script" uid="uid://m18x5m1kc621" path="res://game/objects/crystal_vein/crystal_shard_rig.gd" id="2_shard"]
+[ext_resource type="Script" uid="uid://ba6nkarhrwj0f" path="res://game/objects/drill/drill_rig.gd" id="3_drill"]
+[ext_resource type="Texture2D" uid="uid://dg8qjb6btyrs1" path="res://art/objects/resources/crystal_vein/crystal_shard_1.png" id="4_s1"]
+[ext_resource type="Texture2D" uid="uid://cbowiu0knriug" path="res://art/objects/resources/crystal_vein/crystal_shard_2.png" id="5_s2"]
+[ext_resource type="Texture2D" uid="uid://d2of1454yh8t4" path="res://art/objects/resources/crystal_vein/crystal_shard_3.png" id="6_s3"]
+
+[sub_resource type="Resource" id="Drill_in_slot"]
+script = ExtResource("3_drill")
+fire_shoulder = 53.0
+fire_elbow = -67.0
+fire_head = 1.0
+tip_offset = Vector2(0, -7)
+core_w = 12.5
+glow_w = 78.0
+glow_a = 0.55
+flicker_a = 0.54
+flicker_speed = 29.0
+hot_r = 120.0
+hot_a = 0.72
+hot_pulse = 0.14
+spark_speed = 660.0
+spark_spread = 171.0
+spark_dir = 6.0
+spark_gravity = 1020.0
+spark_size = 4.8
+spark_tail = 0.042
+
+[sub_resource type="Resource" id="Shard_1"]
+script = ExtResource("2_shard")
+texture = ExtResource("4_s1")
+center = Vector2(601, 250)
+height_for_shadow = 260.0
+bob_amp = 26.0
+period_s = 3.2
+scale = 0.25
+
+[sub_resource type="Resource" id="Shard_2"]
+script = ExtResource("2_shard")
+texture = ExtResource("5_s2")
+center = Vector2(1015, 201)
+height_for_shadow = 220.0
+period_s = 2.6
+phase = 0.33
+sway_deg = 9.0
+
+[sub_resource type="Resource" id="Shard_3"]
+script = ExtResource("2_shard")
+texture = ExtResource("6_s3")
+center = Vector2(579, 715)
+height_for_shadow = 160.0
+bob_amp = 30.0
+period_s = 3.8
+phase = 0.66
+sway_deg = 4.0
+
+[resource]
+script = ExtResource("1_rig")
+shards = Array[ExtResource("2_shard")]([SubResource("Shard_1"), SubResource("Shard_2"), SubResource("Shard_3")])
+drill = SubResource("Drill_in_slot")
