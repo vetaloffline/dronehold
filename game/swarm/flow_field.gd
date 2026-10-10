@@ -6,6 +6,9 @@ extends RefCounted
 ## Rebuild only when the map changes (a building placed or destroyed).
 
 const INF := 1.0e20
+## A cell costing this much or more is solid for the slimes (a wall, docs/concept.md «Будівництво»): the
+## path goes through it only if there is no way round, and never diagonally past its corner.
+const SOLID := 1000.0
 const DIAG := 1.41421356
 ## 8 neighbours: dc, dr, step cost.
 const NB := [
@@ -68,9 +71,9 @@ func _dijkstra(targets: Array[Vector2i]) -> void:
 			var j := nr * cols + nc
 			if cost[j] >= INF:
 				continue
-			# No corner cutting: a diagonal step needs both side cells open.
+			# No corner cutting: a diagonal step needs both side cells open (not a cliff, not a wall).
 			if nb[0] != 0 and nb[1] != 0:
-				if cost[r * cols + nc] >= INF or cost[nr * cols + c] >= INF:
+				if cost[r * cols + nc] >= SOLID or cost[nr * cols + c] >= SOLID:
 					continue
 			var nd: float = d + nb[2] * cost[j]
 			if nd < dist[j]:

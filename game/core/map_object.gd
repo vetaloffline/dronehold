@@ -14,6 +14,9 @@ extends Node2D
 		_place()
 
 var _placed_at := Vector2.INF
+## Build-mode preview (Builder): drawn on the map, but not a part of it — GameMap.objects() skips it,
+## so it blocks no cells, joins no groups and nothing targets it. Set before adding to the tree.
+var ghost := false
 
 
 ## Footprint in cells. Override in subclasses.
@@ -39,6 +42,12 @@ func get_clear_radius() -> float:
 ## Extra path cost for enemies to pass through (they chew through buildings); 0 = free. Override.
 func get_path_cost() -> float:
 	return 0.0
+
+
+## Slimes can not walk into its cells at all (a wall); others they walk round by path cost only.
+## Override.
+func blocks_walk() -> bool:
+	return false
 
 
 ## Whether the footprint occupies cells (decor props do not).
@@ -90,6 +99,12 @@ func cell_for_point(p: Vector2) -> Vector2i:
 	var f := get_footprint()
 	var sh := get_map_shift()
 	return Vector2i(int(round(p.x / MapGrid.CELL.x - f.x * 0.5 - sh.x)), int(round(p.y / MapGrid.CELL.y - f.y * 0.5 - sh.y)))
+
+
+## Map px square of the cells it takes, where it is drawn (build / selection highlights). Override
+## when the object does not stand on its cells (a drill in a vein slot).
+func footprint_rect() -> Rect2:
+	return Rect2(Vector2(cell) * MapGrid.CELL, Vector2(get_footprint()) * MapGrid.CELL)
 
 
 func footprint_cells() -> Array[Vector2i]:

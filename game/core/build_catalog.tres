@@ -1,0 +1,45 @@
+[gd_resource type="Resource" script_class="BuildCatalog" format=3]
+
+[ext_resource type="Script" path="res://game/core/build_catalog.gd" id="1_cat"]
+[ext_resource type="Script" path="res://game/core/build_item.gd" id="2_item"]
+[ext_resource type="PackedScene" path="res://game/objects/drill/drill.tscn" id="3_drill"]
+[ext_resource type="PackedScene" path="res://game/objects/machine_gun/machine_gun.tscn" id="4_mg"]
+[ext_resource type="PackedScene" path="res://game/objects/grenade_launcher/grenade_launcher.tscn" id="5_gl"]
+[ext_resource type="PackedScene" path="res://game/objects/wall/wall.tscn" id="6_wall"]
+[ext_resource type="PackedScene" path="res://game/objects/relay/relay.tscn" id="7_relay"]
+
+[sub_resource type="Resource" id="Item_drill"]
+script = ExtResource("2_item")
+title = "Бур"
+scene = ExtResource("3_drill")
+cost = {"crystal": 100}
+vein_slot_only = true
+
+[sub_resource type="Resource" id="Item_mg"]
+script = ExtResource("2_item")
+title = "Кулемет"
+scene = ExtResource("4_mg")
+cost = {"crystal": 50}
+
+[sub_resource type="Resource" id="Item_gl"]
+script = ExtResource("2_item")
+title = "Гранатомет"
+scene = ExtResource("5_gl")
+cost = {"crystal": 120}
+
+[sub_resource type="Resource" id="Item_wall"]
+script = ExtResource("2_item")
+title = "Стіна"
+scene = ExtResource("6_wall")
+cost = {"crystal": 10}
+line = true
+
+[sub_resource type="Resource" id="Item_relay"]
+script = ExtResource("2_item")
+title = "Ретранслятор"
+scene = ExtResource("7_relay")
+cost = {"crystal": 80}
+
+[resource]
+script = ExtResource("1_cat")
+items = Array[ExtResource("2_item")]([SubResource("Item_drill"), SubResource("Item_mg"), SubResource("Item_gl"), SubResource("Item_wall"), SubResource("Item_relay")])

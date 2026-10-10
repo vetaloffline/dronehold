@@ -1,0 +1,15 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/objects/block/block_building.gd" id="1_block"]
+[ext_resource type="Resource" path="res://game/objects/relay/relay_rig.tres" id="2_rig"]
+
+[node name="Relay" type="Node2D"]
+script = ExtResource("1_block")
+rig = ExtResource("2_rig")
+title = "Ретранслятор"
+
+[node name="DronePad1" type="Marker2D" parent="."]
+position = Vector2(-52, 14)
+
+[node name="DronePad2" type="Marker2D" parent="."]
+position = Vector2(52, 14)

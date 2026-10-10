@@ -110,6 +110,8 @@ func _enter_tree() -> void:
 func _rebuild_field() -> void:
 	if map and map.grid:
 		field = map.build_flow_field()
+		if sim:
+			sim.solid = map.walk_blocked()
 		_spawn_cells.clear()
 		for p in map.spawn_points():
 			var c := _nearest_reachable(map.grid.cell_at(p), 8)

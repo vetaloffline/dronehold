@@ -5,7 +5,7 @@ extends CanvasLayer
 ## 2026-10-09): picture from the real sprites, name, level and up to 4 stat tiles.
 ## Turret: damage / rate / range (+ blast for the grenade launcher). Drill: storage / per cycle / cycle.
 ## Tap empty ground, ✕ or Esc — the card goes. A drag (camera pan) is not a tap: the pointer must
-## move less than TAP_SLOP px.
+## move less than TAP_SLOP px. While the build mode is open (BuildMenu) taps belong to it.
 
 @export var map: GameMap
 
@@ -31,6 +31,10 @@ var _highlight: SelectionHighlight
 @onready var _bg := $Root/Card/Body/Bg as Control
 
 
+func _enter_tree() -> void:
+	add_to_group("object_info")
+
+
 func _ready() -> void:
 	_card.visible = false
 	_close.pressed.connect(select.bind(null))
@@ -46,6 +50,9 @@ func _unhandled_input(e: InputEvent) -> void:
 		select(null)
 		return
 	if not (e is InputEventMouseButton) or e.button_index != MOUSE_BUTTON_LEFT:
+		return
+	if BuildMenu.open_in(self):
+		_press = Vector2.INF
 		return
 	if e.pressed:
 		_press = e.position

@@ -3,9 +3,9 @@ class_name StatIcon
 extends Control
 ## Line icon of a stat on the info card, drawn in code (art/concept/11_turret_info_v1.png):
 ## damage — crossed bullets, rate — three bullets, range — crosshair, blast — burst in a ring,
-## crystal — a cut gem, clock — a dial.
+## crystal — a cut gem, clock — a dial; check / cross — the build mode ✔ / ✖ buttons.
 
-enum Kind { DAMAGE, RATE, RANGE, BLAST, CRYSTAL, CLOCK }
+enum Kind { DAMAGE, RATE, RANGE, BLAST, CRYSTAL, CLOCK, CHECK, CROSS }
 
 @export var kind := Kind.DAMAGE:
 	set(v): kind = v; queue_redraw()
@@ -56,6 +56,12 @@ func _draw() -> void:
 			draw_line(c, c + Vector2(0, -s * 0.26), color, w, true)
 			draw_line(c, c + Vector2(s * 0.2, s * 0.06), color, w, true)
 			draw_circle(c, w * 0.7, color)
+		Kind.CHECK:
+			draw_polyline(PackedVector2Array([c + Vector2(-s * 0.32, 0.0), c + Vector2(-s * 0.08, s * 0.24),
+				c + Vector2(s * 0.34, -s * 0.24)]), color, s * 0.14, true)
+		Kind.CROSS:
+			draw_line(c + Vector2(-s * 0.26, -s * 0.26), c + Vector2(s * 0.26, s * 0.26), color, s * 0.14, true)
+			draw_line(c + Vector2(s * 0.26, -s * 0.26), c + Vector2(-s * 0.26, s * 0.26), color, s * 0.14, true)
 
 
 ## A bullet along `ang` (tip forward): casing + pointed head, length `l`, width `bw`.

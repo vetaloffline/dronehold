@@ -112,7 +112,12 @@ func find_vein(c: Vector2i) -> CrystalVein:
 
 
 func _slot_point(v: CrystalVein) -> Vector2:
-	return v.vein_px_to_parent(v.drill_px_to_vein(rig.ground_point))
+	return Drill.slot_ground_point(v, rig)
+
+
+## Where a drill with rig `r` stands in the slot of `v` (its ground point, the vein's parent space).
+static func slot_ground_point(v: CrystalVein, r: DrillRig) -> Vector2:
+	return v.vein_px_to_parent(v.drill_px_to_vein(r.ground_point))
 
 
 func ground_point_for(c: Vector2i) -> Vector2:

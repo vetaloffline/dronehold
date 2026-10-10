@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://game/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://game/maps/map_03/map_03.tscn" id="2_map"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://game/core/wallet.gd" id="5_wallet"]
 [ext_resource type="PackedScene" path="res://game/ui/game_hud.tscn" id="6_game_hud"]
 [ext_resource type="PackedScene" path="res://game/ui/object_info.tscn" id="7_object_info"]
+[ext_resource type="Script" path="res://game/ui/build_menu.gd" id="8_build"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -30,3 +31,8 @@ wallet = NodePath("../Wallet")
 
 [node name="ObjectInfo" parent="." node_paths=PackedStringArray("map") instance=ExtResource("7_object_info")]
 map = NodePath("../Map03")
+
+[node name="BuildMenu" type="CanvasLayer" parent="." node_paths=PackedStringArray("map", "wallet")]
+script = ExtResource("8_build")
+map = NodePath("../Map03")
+wallet = NodePath("../Wallet")

@@ -10,7 +10,7 @@ const OUT := "res://game/maps/map_03/map_03.tscn"
 const LAYOUT := "res://art/maps/map_03/map_03_layout.png"
 const GROUND_DIR := "res://game/maps/map_03/ground/"
 const CHUNK := 2048
-const VEIN_SLOT := Vector2i(6, -2)
+const VEIN_SLOT := Vector2i(6, 0)  # = CrystalVein.SLOT (was (6, −2) until 2026-10-09)
 const GRID_OUT := "res://game/maps/map_03/map_03_grid.tres"
 ## map_03.json (old HTML editor) counts cells of 64×48; the game grid is 32×24.
 const JSON_CELL_K := 2

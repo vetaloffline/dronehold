@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="WallRig" format=3]
+
+[ext_resource type="Script" path="res://game/objects/wall/wall_rig.gd" id="1_rig"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/wall/wall_pillar.png" id="2_pillar"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/wall/wall_along.png" id="3_along"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/wall/wall_depth.png" id="4_depth"]
+
+[resource]
+script = ExtResource("1_rig")
+pillar = ExtResource("2_pillar")
+pillar_ground = Vector2(68, 202)
+along = ExtResource("3_along")
+along_ground = Vector2(-68, 142)
+depth = ExtResource("4_depth")
+depth_ground = Vector2(36, 58)
+footprint = Vector2i(1, 1)
+height = 26.0
+top_color = Color(0.62, 0.64, 0.68, 1)
+side_color = Color(0.38, 0.4, 0.45, 1)
+edge_color = Color(0.16, 0.17, 0.2, 1)
+max_hp = 300.0
+path_cost = 10000.0
+clear_radius = 0.0
+store = false
+solid = true

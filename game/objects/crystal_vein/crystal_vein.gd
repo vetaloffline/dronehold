@@ -6,10 +6,13 @@ extends MapObject
 ## per shard: glow (ADD) → shard. The vein shadow is a ground layer (z −1).
 ## Node origin = ground point; everything inside is in crystal_vein.png px minus the ground point.
 
-## Cell of the drill slot relative to the vein cell: right-back corner (map_03_editor.html VEIN_SLOT)
-## or, mirrored, left-back. One slot per vein: the map picks the side (`drill_side`).
-const SLOT := Vector2i(6, -2)
-const SLOT_LEFT := Vector2i(-2, -2)
+## Cell of the drill slot relative to the vein cell: right of the vein or, mirrored, left of it. One
+## slot per vein: the map picks the side (`drill_side`). The cells are where the drill is drawn (the
+## vein places it by its art: its 2×2 square is ~0.46 cell sideways and ~0.28 cell down from these
+## cells). Until 2026-10-09 it was (6, −2) / (−2, −2) — 2 rows above the drill, so the cells the drill
+## kept free (red in the build mode) were not under it.
+const SLOT := Vector2i(6, 0)
+const SLOT_LEFT := Vector2i(-2, 0)
 
 enum Side { RIGHT, LEFT }
 ## Radial white → transparent, shared by all glows.

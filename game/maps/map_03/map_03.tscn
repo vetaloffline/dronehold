@@ -133,7 +133,7 @@ cell = Vector2i(100, 28)
 [node name="Drill" parent="World" unique_id=1198615486 instance=ExtResource("17_q02f5")]
 position = Vector2(558.8, 390.72003)
 scale = Vector2(0.12, 0.12)
-cell = Vector2i(16, 12)
+cell = Vector2i(16, 14)
 
 [node name="Spawns" type="Node2D" parent="." unique_id=806465198]
 
