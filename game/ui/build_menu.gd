@@ -8,7 +8,13 @@ extends CanvasLayer
 ## - open, the whole map gets a light grid and the cells where nothing can be built are red;
 ## - tap the map — the ghost of the building stands there on its cells (green — can, red — can not);
 ##   another tap moves it. The drill only goes into a highlighted free vein slot;
-## - ✔ next to the ghost builds it (takes the price), ✖ removes the ghost. The card stays active.
+## - ✔ next to the ghost builds it (takes the price), ✖ removes the ghost. The card stays active;
+## - the wall (item.line) is painted: press, hold and drag — every cell the finger goes over becomes a
+##   ghost piece (cells it can not stand on are skipped and flash red; a fast or slanted drag is filled
+##   in as a staircase, Builder.cells_between). Lift and paint more; a tap on a painted cell takes it
+##   back; ✔ builds all of it if the whole price is there, ✖ drops it. Old walls can be joined. While
+##   painting one finger paints and two fingers move the camera (PC: left paints, right drags).
+## - open, the camera comes closer (BUILD_ZOOM) so a cell fits a finger; closed, it goes back.
 ## A drag pans the camera and is not a tap (pointer moves less than TAP_SLOP px).
 
 signal built(o: MapObject)
@@ -29,6 +35,9 @@ const LIFT := 18.0
 const GOLD := Color(1.0, 0.78, 0.25)
 const CYAN := Color(0.33, 0.82, 1.0, 0.9)
 const PRICE_BAD := Color(1.0, 0.45, 0.4)
+## While building the camera is at least this close (a cell ≈ 64×48 px on a 1080p screen).
+const BUILD_ZOOM := 2.0
+const PAINT_HINT := "веди пальцем — де пройшов, там буде стіна"
 
 @export var map: GameMap
 @export var wallet: Wallet
@@ -39,6 +48,24 @@ var item: BuildItem
 var ghost: MapObject
 ## Why the ghost can not be built ("" = it can).
 var problem := ""
+## The place is fine (the ghost is green); only the money may be short — then just the price is red
+## and ✔ is off.
+var place_ok := true
+## Wall painting: the cells painted so far (in order) and one ghost piece per new cell.
+var painted: Array[Vector2i] = []
+var _line_ghosts := {}
+## The stroke being painted: on (the finger is down), its last cell, cells it added, what may be
+## painted (Builder.blocked_cells / line_existing when it began), fingers on the screen.
+var _stroke := false
+var _stroke_last := Vector2i(-1, -1)
+var _stroke_added: Array[Vector2i] = []
+var _stroke_from := Vector2.ZERO
+var _paint_blocked := PackedByteArray()
+var _paint_existing := {}
+var _touches := {}
+## The camera's own drag settings, given back when the wall card is put down; zoom before the mode.
+var _cam_saved := []
+var _zoom_before := 0.0
 
 var _root: Control
 var _toggle: TextureButton
@@ -47,6 +74,7 @@ var _cards: Array[Button] = []
 var _confirm: Control
 var _ok: Button
 var _cancel: Button
+var _price: Label
 var _hint: Label
 var _overlay: BuildOverlay
 var _press := Vector2.INF
@@ -225,6 +253,35 @@ func _build_confirm() -> void:
 	_cancel = _square_button("Cancel", Color(0.72, 0.13, 0.15), StatIcon.Kind.CROSS)
 	_ok.pressed.connect(confirm)
 	_cancel.pressed.connect(clear_ghost)
+	var price := PanelContainer.new()
+	price.name = "Price"
+	price.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.035, 0.06, 0.1, 0.9)
+	sb.set_border_width_all(2)
+	sb.border_color = CYAN
+	sb.set_corner_radius_all(14)
+	sb.content_margin_left = 14
+	sb.content_margin_right = 16
+	price.add_theme_stylebox_override("panel", sb)
+	var prow := HBoxContainer.new()
+	prow.name = "Row"
+	prow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	prow.add_theme_constant_override("separation", 6)
+	var ico := TextureRect.new()
+	ico.texture = CRYSTAL_TEX
+	ico.custom_minimum_size = Vector2(22, 34)
+	ico.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	ico.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	ico.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	prow.add_child(ico)
+	_price = Label.new()
+	_price.name = "Cost"
+	_price.add_theme_font_size_override("font_size", 32)
+	_price.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	prow.add_child(_price)
+	price.add_child(prow)
+	row.add_child(price)
 	row.add_child(_ok)
 	row.add_child(_cancel)
 	_root.add_child(row)
@@ -258,6 +315,8 @@ func _refresh() -> void:
 		(b.get_node("Picture") as Control).modulate = Color.WHITE if can else Color(0.6, 0.6, 0.65)
 	if ghost:
 		_check_ghost()
+	elif not painted.is_empty():
+		_check_line()
 
 
 # ---------- build mode
@@ -269,6 +328,7 @@ func set_open(v: bool) -> void:
 	_toggle.texture_normal = CLOSE_TEX if v else BUTTON_TEX
 	if not v:
 		select(null)
+	_zoom_for_build(v)
 	_refresh_map_layer()
 	_strip.visible = true
 	var tw := create_tween().set_parallel().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
@@ -296,6 +356,9 @@ func _on_card(it: BuildItem) -> void:
 func select(it: BuildItem) -> void:
 	item = it
 	clear_ghost()
+	_camera_for_paint(it != null and it.line)
+	if it != null and it.line:
+		_flash_hint(PAINT_HINT)
 	_refresh()
 	_refresh_map_layer()
 
@@ -311,12 +374,18 @@ func _refresh_map_layer() -> void:
 		_overlay.show_blocked(false)
 	if ghost:
 		_check_ghost()
+	elif not painted.is_empty():
+		_check_line()
 
 
 func clear_ghost() -> void:
 	if ghost and is_instance_valid(ghost):
 		ghost.queue_free()
 	ghost = null
+	place_ok = true
+	painted.clear()
+	_stroke = false
+	_sync_line_ghosts()
 	problem = ""
 	_update_overlay()
 
@@ -327,8 +396,12 @@ func place_at(p: Vector2) -> bool:
 	if item == null or map == null:
 		return false
 	var cell: Vector2i
+	if item.line:
+		paint_begin(p)
+		paint_end(true)
+		return true
 	if item.vein_slot_only:
-		var v := Builder.slot_at(map, p, _drill_rig(item))
+		var v := Builder.slot_at(map, p)
 		if v == null:
 			_flash_hint(Builder.NOT_A_SLOT)
 			return false
@@ -346,8 +419,126 @@ func place_at(p: Vector2) -> bool:
 	return true
 
 
-## ✔: build the active card where the ghost stands.
+## Wall painting. A stroke: paint_begin() where the finger goes down, paint_to() as it moves,
+## paint_end() when it lifts (`tap` = it hardly moved: a tap on a painted cell takes that cell back).
+func paint_begin(p: Vector2) -> void:
+	if item == null or not item.line or map == null:
+		return
+	_paint_blocked = Builder.blocked_cells(map, item)
+	_paint_existing = Builder.line_existing(map, item)
+	_stroke = true
+	_stroke_added.clear()
+	_stroke_from = p
+	var c := map.grid.cell_at(p)
+	_stroke_last = c
+	_paint_cell(c, true)
+	_after_line_change()
+
+
+func paint_to(p: Vector2) -> void:
+	if not _stroke:
+		return
+	var c := map.grid.cell_at(p)
+	if c == _stroke_last:
+		return
+	for cc in Builder.cells_between(_stroke_last, c):
+		_paint_cell(cc, false)
+	_stroke_last = c
+	_after_line_change()
+
+
+func paint_end(tap: bool) -> void:
+	if not _stroke:
+		return
+	_stroke = false
+	if tap and _stroke_added.is_empty():
+		# A tap on a cell painted before: take it back.
+		var c := map.grid.cell_at(_stroke_from)
+		if painted.has(c):
+			painted.erase(c)
+			_after_line_change()
+
+
+## Two fingers came down while painting: the stroke was the start of a camera move — drop it.
+func paint_cancel() -> void:
+	if not _stroke:
+		return
+	_stroke = false
+	for c in _stroke_added:
+		painted.erase(c)
+	_stroke_added.clear()
+	_after_line_change()
+
+
+func _paint_cell(c: Vector2i, first: bool) -> void:
+	if painted.has(c):
+		return
+	var g := map.grid
+	if not g.inside(c.x, c.y) or not (_paint_existing.has(c) or _paint_blocked[c.y * g.cols + c.x] == 0):
+		if _overlay and not first:
+			_overlay.flash_bad(c)
+		return
+	painted.append(c)
+	_stroke_added.append(c)
+
+
+## All painted cells, in order (old wall pieces painted over included).
+func line_cells() -> Array[Vector2i]:
+	return painted.duplicate()
+
+
+## The cells of the line that get a new piece (old walls are not built again).
+func line_new_cells() -> Array[Vector2i]:
+	var existing := Builder.line_existing(map, item) if item else {}
+	var out: Array[Vector2i] = []
+	for c in line_cells():
+		if not existing.has(c):
+			out.append(c)
+	return out
+
+
+func _after_line_change() -> void:
+	_sync_line_ghosts()
+	_check_line()
+
+
+## One ghost piece per new cell of the line.
+func _sync_line_ghosts() -> void:
+	var want := {}
+	if item and item.line and map:
+		for c in line_new_cells():
+			want[c] = true
+	for c in _line_ghosts.keys():
+		if not want.has(c):
+			var g: Node = _line_ghosts[c]
+			if is_instance_valid(g):
+				g.queue_free()
+			_line_ghosts.erase(c)
+	for c in want:
+		if not _line_ghosts.has(c):
+			var g := Builder.make(item, c, true)
+			g.z_index = 10
+			map.world().add_child(g)
+			_line_ghosts[c] = g
+
+
+func _check_line() -> void:
+	var n := line_new_cells().size()
+	var cost := Builder.line_cost(item, n)
+	problem = ""
+	place_ok = true  # every point was checked when tapped
+	if wallet and not wallet.can_pay(cost):
+		problem = "%s (треба %d)" % [Builder.NO_MONEY, int(cost.get("crystal", 0))]
+	_ok.disabled = problem != "" or n == 0
+	_price.text = str(int(cost.get("crystal", 0)))
+	_price.add_theme_color_override("font_color", Color.WHITE if problem == "" else PRICE_BAD)
+	_update_overlay()
+
+
+## ✔: build the active card where the ghost stands (a line: all its new pieces).
 func confirm() -> MapObject:
+	if item and item.line:
+		return _confirm_line()
 	if ghost == null or item == null:
 		return null
 	var why := []
@@ -363,15 +554,23 @@ func confirm() -> MapObject:
 	return o
 
 
-var _drill_rigs := {}
-
-## Rig of the drill `it` builds (where it stands in a slot).
-func _drill_rig(it: BuildItem) -> DrillRig:
-	if not _drill_rigs.has(it):
-		var o := it.scene.instantiate()
-		_drill_rigs[it] = (o as Drill).rig if o is Drill else null
-		o.free()
-	return _drill_rigs[it]
+func _confirm_line() -> MapObject:
+	var cells := line_new_cells()
+	if cells.is_empty():
+		return null
+	var why := []
+	var got := Builder.build_line(map, item, cells, wallet, why)
+	if got.is_empty():
+		_flash_hint(why[0] if why.size() > 0 else "")
+		return null
+	var last := got.back() as MapObject
+	FloatText.pop(map.world(), last.position - Vector2(0, 60), "−%d" % (int(item.cost.get("crystal", 0)) * got.size()), CRYSTAL_TEX)
+	clear_ghost()
+	_refresh()
+	_refresh_map_layer()
+	for o in got:
+		built.emit(o)
+	return last
 
 
 func _footprint_of(it: BuildItem) -> Vector2i:
@@ -383,7 +582,10 @@ func _footprint_of(it: BuildItem) -> Vector2i:
 
 func _check_ghost() -> void:
 	problem = Builder.problem(map, item, ghost, wallet)
+	place_ok = problem == "" or problem == Builder.NO_MONEY
 	_ok.disabled = problem != ""
+	_price.text = str(int(item.cost.get("crystal", 0)))
+	_price.add_theme_color_override("font_color", Color.WHITE if wallet == null or wallet.can_pay(item.cost) else PRICE_BAD)
 	_update_overlay()
 
 
@@ -391,15 +593,20 @@ func _update_overlay() -> void:
 	if _overlay == null:
 		return
 	var slots: Array[Rect2] = []
-	if item and item.vein_slot_only and map and _drill_rig(item):
+	if item and item.vein_slot_only and map:
 		for v in Builder.free_slots(map):
-			slots.append(Drill.slot_rect(v, _drill_rig(item)))
+			slots.append(Builder.slot_rect(v))
 	var fp := Rect2i()
 	var sq := Rect2()
 	if ghost:
 		fp = Rect2i(ghost.cell, ghost.get_footprint())
 		sq = ghost.footprint_rect()
-	_overlay.show_state(fp, sq, problem == "", slots)
+	_overlay.show_state(fp, sq, place_ok, slots)
+	var line: Array[Vector2i] = []
+	if item and item.line:
+		line = line_cells()
+	var no_points: Array[Vector2i] = []
+	_overlay.show_line(line, no_points, place_ok)
 
 
 func _flash_hint(text: String) -> void:
@@ -409,7 +616,7 @@ func _flash_hint(text: String) -> void:
 	_hint.visible = true
 	_hint.modulate.a = 1.0
 	_hint.size = Vector2(_root.size.x, 40)
-	_hint.position = Vector2(0, _strip.position.y - LIFT - 60.0)
+	_hint.position = Vector2(0, _strip.position.y - LIFT - 90.0)
 	var tw := create_tween()
 	tw.tween_interval(1.4)
 	tw.tween_property(_hint, "modulate:a", 0.0, 0.4)
@@ -418,12 +625,20 @@ func _flash_hint(text: String) -> void:
 
 func _process(dt: float) -> void:
 	_t += dt
+	var a := 0.85 + 0.1 * sin(_t * 4.0)
+	var tint := Color(0.75, 1.45, 0.8, a) if place_ok else Color(1.5, 0.6, 0.6, a)
+	for g in _line_ghosts.values():
+		if is_instance_valid(g):
+			(g as CanvasItem).modulate = tint
+	var anchor := Rect2()
 	if ghost and is_instance_valid(ghost):
-		var a := 0.85 + 0.1 * sin(_t * 4.0)
-		ghost.modulate = Color(0.75, 1.45, 0.8, a) if problem == "" else Color(1.5, 0.6, 0.6, a)
-		# ✔ ✖ next to the top right corner of the ghost's square.
-		var sq := ghost.footprint_rect()
-		var corner := Vector2(sq.end.x, sq.position.y)
+		ghost.modulate = tint
+		anchor = ghost.footprint_rect()
+	elif not painted.is_empty():
+		anchor = Rect2(Vector2(painted.back()) * MapGrid.CELL, MapGrid.CELL)
+	if anchor.size != Vector2.ZERO:
+		# ✔ ✖ next to the top right corner of the ghost's square (a line: of its last point).
+		var corner := Vector2(anchor.end.x, anchor.position.y)
 		var at := _screen_of(corner)
 		_confirm.visible = true
 		_confirm.reset_size()
@@ -447,14 +662,73 @@ func _unhandled_input(e: InputEvent) -> void:
 	if e is InputEventKey and e.pressed and e.keycode == KEY_ESCAPE:
 		set_open(false)
 		return
+	if e is InputEventScreenTouch:
+		if e.pressed:
+			_touches[e.index] = true
+			if _touches.size() >= 2:
+				paint_cancel()
+		else:
+			_touches.erase(e.index)
+		return
+	var painting := item != null and item.line
+	if painting and e is InputEventMouseMotion and _stroke:
+		if _touches.size() < 2:
+			paint_to(screen_to_map(e.position))
+		return
 	if not (e is InputEventMouseButton) or e.button_index != MOUSE_BUTTON_LEFT:
 		return
 	if e.pressed:
 		_press = e.position
+		if painting and _touches.size() < 2:
+			paint_begin(screen_to_map(e.position))
 		return
 	if _press == Vector2.INF:
 		return
 	var moved: float = (e.position - _press).length()
 	_press = Vector2.INF
-	if moved <= TAP_SLOP and item:
+	if painting:
+		paint_end(moved <= TAP_SLOP)
+	elif moved <= TAP_SLOP and item:
 		place_at(screen_to_map(e.position))
+
+
+func _camera() -> MapCamera:
+	return get_viewport().get_camera_2d() as MapCamera if is_inside_tree() else null
+
+
+## Painting a wall: one finger / the left button paint, so they must not drag the camera
+## (two fingers and the right button still do). Given back when another card is chosen.
+func _camera_for_paint(on: bool) -> void:
+	var cam := _camera()
+	if cam == null:
+		return
+	if on and _cam_saved.is_empty():
+		_cam_saved = [cam.one_finger_pan, cam.drag_with_any_button, cam.drag_with_right]
+		cam.one_finger_pan = false
+		cam.drag_with_any_button = false
+		cam.drag_with_right = true
+	elif not on and not _cam_saved.is_empty():
+		cam.one_finger_pan = _cam_saved[0]
+		cam.drag_with_any_button = _cam_saved[1]
+		cam.drag_with_right = _cam_saved[2]
+		_cam_saved.clear()
+
+
+## Opening the mode brings the camera to at least BUILD_ZOOM (cells big enough for a finger);
+## closing it goes back to the zoom it had.
+func _zoom_for_build(open: bool) -> void:
+	var cam := _camera()
+	if cam == null:
+		return
+	var from := cam.zoom.x
+	var to := from
+	if open:
+		_zoom_before = from
+		to = maxf(from, minf(BUILD_ZOOM, cam.zoom_max))
+	elif _zoom_before > 0.0:
+		to = _zoom_before
+	if is_equal_approx(from, to):
+		return
+	var centre := get_viewport().get_visible_rect().size * 0.5
+	var tw := create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_method(func(z: float) -> void: cam.zoom_to(z, centre), from, to, 0.3)

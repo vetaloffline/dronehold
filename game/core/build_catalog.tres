@@ -32,6 +32,7 @@ script = ExtResource("2_item")
 title = "Стіна"
 scene = ExtResource("6_wall")
 cost = {"crystal": 10}
+line = true
 
 [sub_resource type="Resource" id="Item_relay"]
 script = ExtResource("2_item")

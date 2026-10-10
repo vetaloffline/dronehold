@@ -44,6 +44,12 @@ func get_path_cost() -> float:
 	return 0.0
 
 
+## Slimes can not walk into its cells at all (a wall); others they walk round by path cost only.
+## Override.
+func blocks_walk() -> bool:
+	return false
+
+
 ## Whether the footprint occupies cells (decor props do not).
 func occupies_cells() -> bool:
 	return true

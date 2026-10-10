@@ -102,9 +102,15 @@ func _test_drones(map: GameMap) -> void:
 	var w := Wallet.of(_main)
 	var drill := _drill
 	var core := _core
-	drill.stored = 0
-	drill.claimed = 0
-	drill.process_mode = Node.PROCESS_MODE_DISABLED  # no new crystals during the test
+	# Every drill on the map empty and stopped (the map's own drill mines too), only the test's one is used.
+	var others: Array[Drill] = []
+	for o in map.objects():
+		if o is Drill:
+			(o as Drill).stored = 0
+			(o as Drill).claimed = 0
+			o.process_mode = Node.PROCESS_MODE_DISABLED  # no new crystals during the test
+			if o != drill:
+				others.append(o)
 	var a := ds[0]
 	var b := ds[1]
 	# Start clean: both by the core, no orders from the first frames of the game.
@@ -162,6 +168,8 @@ func _test_drones(map: GameMap) -> void:
 	for n in blockers:
 		n.free()
 	drill.process_mode = Node.PROCESS_MODE_INHERIT
+	for o in others:
+		o.process_mode = Node.PROCESS_MODE_INHERIT
 
 
 ## First cell near the core where `item` can be built (ignoring the money), else (-1, -1).
@@ -178,6 +186,64 @@ func _free_cell(map: GameMap, item: BuildItem) -> Vector2i:
 				if ok:
 					return c
 	return Vector2i(-1, -1)
+
+
+## Left end of `n` free buildable cells in a row near the core (for a wall), else (-1, -1).
+func _wall_row(map: GameMap, n: int) -> Vector2i:
+	var bl := Builder.blocked_cells(map, null)
+	for ring in range(5, 40):
+		for dx in range(-ring, ring + 1):
+			for dy in [-ring, ring]:
+				var s := _core.cell + Vector2i(dx, dy)
+				var ok := true
+				for k in n:
+					for down in 4:
+						var c := s + Vector2i(k, down)
+						ok = ok and map.grid.inside(c.x, c.y) and bl[c.y * map.grid.cols + c.x] == 0
+				if ok:
+					return s
+	return Vector2i(-1, -1)
+
+
+## Press at the first cell, move through the others, lift at the last (mouse = the finger).
+func _drag(map: GameMap, cells: Array) -> void:
+	var pts := []
+	for c in cells:
+		pts.append(_screen_of(map, map.grid.cell_center(c)))
+	var down := InputEventMouseButton.new()
+	down.button_index = MOUSE_BUTTON_LEFT
+	down.pressed = true
+	down.position = pts[0]
+	down.global_position = pts[0]
+	root.push_input(down, true)
+	for k in range(1, pts.size()):
+		var m := InputEventMouseMotion.new()
+		m.position = pts[k]
+		m.global_position = pts[k]
+		m.relative = pts[k] - pts[k - 1]
+		m.button_mask = MOUSE_BUTTON_MASK_LEFT
+		root.push_input(m, true)
+	var up := InputEventMouseButton.new()
+	up.button_index = MOUSE_BUTTON_LEFT
+	up.pressed = false
+	up.position = pts.back()
+	up.global_position = pts.back()
+	root.push_input(up, true)
+
+
+func _four_connected_cells(cells: Array) -> bool:
+	for k in range(1, cells.size()):
+		var a: Vector2i = cells[k - 1]
+		var b: Vector2i = cells[k]
+		if absi(a.x - b.x) + absi(a.y - b.y) != 1:
+			return false
+	return true
+
+
+## Another card: the camera gets its own drag settings back.
+func drill_card_restore_cam(bm: BuildMenu, cam: MapCamera) -> void:
+	(bm.get_node("Root/Cards/Card1") as Button).pressed.emit()
+	check(cam.one_finger_pan and cam.drag_with_any_button and not cam.drag_with_right, "another card: the camera drags with one finger again")
 
 
 func _item(cat: BuildCatalog, title: String) -> BuildItem:
@@ -211,8 +277,8 @@ func _test_builder(map: GameMap) -> void:
 	var off := Builder.make(drill_i, v.drill_slot_cell() + Vector2i(4, 4))
 	check(Builder.problem(map, drill_i, off, w) == Builder.NOT_A_SLOT, "drill off a slot: «%s»" % Builder.NOT_A_SLOT)
 	off.free()
-	var tap := Drill.slot_rect(v, _drill.rig).get_center()
-	check(Builder.slot_at(map, tap, _drill.rig) == v, "a tap inside the highlighted slot finds its vein")
+	var tap := Builder.slot_rect(v).get_center()
+	check(Builder.slot_at(map, tap) == v, "a tap inside the highlighted slot finds its vein")
 	var built: Array[MapObject] = []
 	var d := Builder.build(map, drill_i, v.drill_slot_cell(), w) as Drill
 	check(d != null and d.vein == v and w.amount("crystal") == 900, "drill built in the slot, −100 (wallet %d)" % w.amount("crystal"))
@@ -262,7 +328,7 @@ func _test_builder(map: GameMap) -> void:
 	if wall:
 		var costs := map.building_costs()
 		var k := wall.cell.y * map.grid.cols + wall.cell.x
-		check(costs.has(k) and is_equal_approx(float(costs[k]), 60.0), "wall cells cost slimes 60 extra (got %s)" % [costs.get(k)])
+		check(costs.has(k) and float(costs[k]) >= FlowField.SOLID and map.walk_blocked()[k] == 1, "wall cells: solid for slimes, cost ≥ SOLID in the field (got %s)" % [costs.get(k)])
 		check(not wall.damage(100.0) and is_equal_approx(wall.hp, 200.0), "wall takes 100 → 200 hp")
 		check(wall.damage(500.0) and wall.is_queued_for_deletion(), "0 hp → the wall goes")
 	# Relay: a store for the drones (the ghost is not).
@@ -291,6 +357,7 @@ func _test_build_menu(map: GameMap) -> void:
 	check(bm.is_open and (bm.get_node("Root/Cards") as Control).visible and toggle.texture_normal == BuildMenu.CLOSE_TEX, "build button opens the cards and turns into ✕")
 	# The whole map: a grid and red cells where nothing can be built.
 	var ov0 := map.get_node("Shadows/BuildOverlay") as BuildOverlay
+	var ov := ov0
 	var rock := Vector2i(-1, -1)
 	for r in map.grid.rows:
 		for c in map.grid.cols:
@@ -325,28 +392,119 @@ func _test_build_menu(map: GameMap) -> void:
 	check(built is Turret and map.objects().has(built) and w.amount("crystal") == 450 and bm.ghost == null and bm.item != null, "✔ builds it (−50), the ghost goes, the card stays active")
 	check(ov0.blocked_shown(cell.x, cell.y) and ov0.blocked_shown(cell.x + 1, cell.y + 1), "the new turret's cells turn red at once")
 	bm.place_at(map.grid.cell_center(cell))
-	check(bm.ghost != null and bm.problem != "" and (bm.get_node("Root/Confirm/Ok") as Button).disabled, "a ghost on taken cells is red, ✔ disabled («%s»)" % bm.problem)
+	check(bm.ghost != null and bm.problem != "" and not bm.place_ok and (bm.get_node("Root/Confirm/Ok") as Button).disabled, "a ghost on taken cells is red, ✔ disabled («%s»)" % bm.problem)
+	(bm.get_node("Root/Confirm/Cancel") as Button).pressed.emit()
+	w.add("crystal", 20 - w.amount("crystal"))
+	bm.place_at(map.grid.cell_center(_free_cell(map, bm.item)) + MapGrid.CELL * 0.5)
+	check(bm.ghost != null and bm.problem == Builder.NO_MONEY and bm.place_ok and ov.ok and (bm.get_node("Root/Confirm/Ok") as Button).disabled, "a free place but 20 crystals for 50: the ghost stays green, ✔ off")
+	w.add("crystal", 450 - w.amount("crystal"))
+	bm.place_at(map.grid.cell_center(cell))
 	(bm.get_node("Root/Confirm/Cancel") as Button).pressed.emit()
 	check(bm.ghost == null, "✖ removes the ghost")
+	# Wall: painted by dragging, built all at once.
+	var wall_card := bm.get_node("Root/Cards/Card3") as Button
+	var cam := _main.get_node("Camera") as MapCamera
+	var cam_pos := cam.position
+	wall_card.pressed.emit()
+	check(bm.item != null and bm.item.line and not cam.one_finger_pan and not cam.drag_with_any_button and cam.drag_with_right, "wall card: one finger / left button paint, the camera drags with two fingers / right button")
+	var row := _wall_row(map, 8)
+	check(row.x >= 0, "a free straight run of 8 cells near the core (%s)" % row)
+	var p0 := row
+	var p1 := row + Vector2i(5, 0)
+	_drag(map, [p0, row + Vector2i(2, 0), p1])
+	check(bm.line_new_cells().size() == 6 and bm._line_ghosts.size() == 6 and cam.position == cam_pos, "a drag over 6 cells paints 6 ghost pieces (gaps between samples filled), the camera stays")
+	check((bm.get_node("Root/Confirm/Price/Row/Cost") as Label).text == "60" and not (bm.get_node("Root/Confirm/Ok") as Button).disabled, "price next to ✔: 60")
+	_drag(map, [p1 + Vector2i(0, 1), p1 + Vector2i(1, 3)])
+	check(bm.line_new_cells().size() == 10 and _four_connected_cells(bm.line_cells().slice(6)), "a second slanted stroke adds a 4-connected staircase (10 pieces)")
+	var taps := map.grid.cell_center(p1 + Vector2i(1, 3))
+	_click(_screen_of(map, taps), _screen_of(map, taps))
+	check(bm.line_new_cells().size() == 9 and not bm.painted.has(p1 + Vector2i(1, 3)), "a tap on a painted cell takes it back")
+	var rock_c := Vector2i(-1, -1)
+	for r in map.grid.rows:
+		for c in map.grid.cols:
+			if rock_c.x < 0 and not map.grid.can_build(c, r):
+				rock_c = Vector2i(c, r)
+	bm.paint_begin(map.grid.cell_center(rock_c - Vector2i(1, 0)))
+	bm.paint_to(map.grid.cell_center(rock_c))
+	bm.paint_end(false)
+	check(not bm.painted.has(rock_c) and ov.bad_cell == rock_c, "dragging over a cliff: the cliff cell is skipped and flashes red")
+	bm.painted.erase(rock_c - Vector2i(1, 0))
+	bm._after_line_change()
+	# Two fingers: the stroke was a camera move — dropped.
+	var n_before := bm.painted.size()
+	bm.paint_begin(map.grid.cell_center(row + Vector2i(0, 3)))
+	bm.paint_to(map.grid.cell_center(row + Vector2i(3, 3)))
+	for k in 2:
+		var t := InputEventScreenTouch.new()
+		t.index = k
+		t.pressed = true
+		t.position = Vector2(400 + 100 * k, 400)
+		root.push_input(t, true)
+	check(bm.painted.size() == n_before, "a second finger drops the stroke (it was a camera move)")
+	for k in 2:
+		var t := InputEventScreenTouch.new()
+		t.index = k
+		t.pressed = false
+		root.push_input(t, true)
+	w.add("crystal", 40 - w.amount("crystal"))
+	bm._refresh()
+	check((bm.get_node("Root/Confirm/Ok") as Button).disabled and bm.problem.contains("90"), "40 crystals for 90: ✔ off, «%s»" % bm.problem)
+	check(bm.place_ok and ov.line_ok and (bm.get_node("Root/Confirm/Price/Row/Cost") as Label).get_theme_color("font_color") == BuildMenu.PRICE_BAD, "short of money: the wall plan stays green, only the price is red")
+	w.add("crystal", 500 - w.amount("crystal"))
+	var before := map.objects().size()
+	var piece := bm.confirm()
+	check(piece is BlockBuilding and map.objects().size() == before + 9 and w.amount("crystal") == 410 and bm.painted.is_empty() and bm._line_ghosts.is_empty(), "✔ builds all 9 pieces at once (−90)")
+	var first: Wall = null
+	for o in map.objects():
+		if o is Wall and o.cell == p0:
+			first = o
+	check(first != null and first.joins(p0 + Vector2i(1, 0)) and not first.joins(p0 - Vector2i(1, 0)) and not first.joins(p0 + Vector2i(0, 1)), "a wall piece joins its neighbour on the right, nothing on the left / below")
+	var mid: Wall = null
+	for o in map.objects():
+		if o is Wall and o.cell == p0 + Vector2i(2, 0):
+			mid = o
+	check(first != null and first.has_pillar() and mid != null and not mid.has_pillar(), "a pillar at the end of a run, none in the middle of a straight run")
+	var g := Builder.make(bm.item, p1 + Vector2i(-1, 1), true) as Wall
+	map.world().add_child(g)
+	var last_piece: Wall = null
+	for o in map.objects():
+		if o is Wall and o.cell == p1 + Vector2i(-1, 0):
+			last_piece = o
+	check(g.joins(p1 + Vector2i(-1, 0)) and last_piece != null and not last_piece.joins(p1 + Vector2i(-1, 1)), "a ghost piece joins a real wall; the real wall does not join the ghost")
+	g.free()
+	# Paint over the old wall: only the new cells are paid.
+	_drag(map, [p1 + Vector2i(-2, 0), p1 + Vector2i(-2, -2)])
+	check(bm.line_new_cells().size() == 2, "a stroke from the old wall: only 2 new pieces")
+	bm.clear_ghost()
+	drill_card_restore_cam(bm, cam)
+	var walls: Array[MapObject] = []
+	for o in map.objects():
+		if o is Wall:
+			walls.append(o)
+	for o in walls:
+		o.free()
 	# Drill: only into a highlighted free slot.
 	var drill_card := bm.get_node("Root/Cards/Card0") as Button
 	drill_card.pressed.emit()
 	var slots := Builder.free_slots(map)
-	var ov := map.get_node("Shadows/BuildOverlay") as BuildOverlay
 	check(slots.size() > 0 and ov.slots.size() == slots.size(), "drill chosen: the free vein slots light up (%d)" % ov.slots.size())
 	if slots.size() > 0:
 		var sc := slots[0].drill_slot_cell()
 		check(not ov.blocked_shown(sc.x, sc.y), "drill chosen: its free slot is not red")
 	if slots.size() > 0:
-		var want := Drill.slot_ground_point(slots[0], _drill.rig) - _drill.rig.map_shift * MapGrid.CELL
-		check(ov.slots[0].get_center().distance_to(want) < 0.5, "a slot lights up where its drill will stand, not on the bare slot cells")
+		# The slot cells are under the drill as it is drawn: its 2×2 square (ground point − map_shift
+		# cells) is less than half a cell off them (until 2026-10-09 it was 2.3 cells below).
+		var drawn := Drill.slot_ground_point(slots[0], _drill.rig) - _drill.rig.map_shift * MapGrid.CELL
+		var off := (drawn - ov.slots[0].get_center()) / MapGrid.CELL
+		check(absf(off.x) < 0.5 and absf(off.y) < 0.5, "a slot lights up under where its drill stands (off by %s cells)" % off)
 	check(not bm.place_at(map.grid.cell_center(cell + Vector2i(0, 4))) and bm.ghost == null, "a tap off a slot puts no drill ghost")
 	if slots.size() > 0:
 		var v := slots[0]
-		check(bm.place_at(Drill.slot_rect(v, _drill.rig).get_center() + Vector2(10, -6)) and bm.ghost is Drill and (bm.ghost as Drill).vein == v and bm.problem == "", "a tap in the slot → drill ghost in it")
-		check(ov.square.get_center().distance_to(bm.ghost.position - _drill.rig.map_shift * MapGrid.CELL) < 1.0, "the green square is under the drill ghost (its ground point map_shift cells below the centre)")
+		check(bm.place_at(Builder.slot_rect(v).get_center() + Vector2(10, -6)) and bm.ghost is Drill and (bm.ghost as Drill).vein == v and bm.problem == "", "a tap in the slot → drill ghost in it")
+		check(ov.square == Builder.slot_rect(v), "the green square is the slot (the drill's cells)")
+		var had := w.amount("crystal")
 		var d := bm.confirm()
-		check(d is Drill and (d as Drill).vein == v and w.amount("crystal") == 350 and ov.slots.size() == slots.size() - 1, "✔ builds the drill (−100), its slot no longer lights up")
+		check(d is Drill and (d as Drill).vein == v and w.amount("crystal") == had - 100 and ov.slots.size() == slots.size() - 1, "✔ builds the drill (−100), its slot no longer lights up")
 		if d:
 			d.free()
 	toggle.pressed.emit()
@@ -464,7 +622,7 @@ func _process(_dt: float) -> bool:
 			if _frame == 40:
 				var v := _vein_l
 				var d := _left_drill
-				check(v.drill_slot_cell() == v.cell + Vector2i(-2, -2), "left slot = vein cell + (−2, −2)")
+				check(v.drill_slot_cell() == v.cell + Vector2i(-2, 0), "left slot = vein cell + (−2, 0)")
 				check(d.vein == v and d.get_map_flip() and d.scale.x < 0.0 and d.scale.y > 0.0, "drill in the left slot is mirrored (scale %s)" % d.scale)
 				var hit := d.get_parent().to_local(d.to_global(d._hit - d.rig.ground_point)) as Vector2
 				var want := v.vein_px_to_parent(v.rig.hit_point_left)

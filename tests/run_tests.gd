@@ -24,6 +24,8 @@ func _init() -> void:
 	_test_grenade_blast()
 	_test_drone_nav()
 	_test_wall()
+	_test_wall_line()
+	_test_wall_holds_slimes()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	quit(1 if _failed > 0 else 0)
 
@@ -272,7 +274,15 @@ func _test_crowd_spacing() -> void:
 	var med := d3[d3.size() / 2]
 	print("crowd: 3 nearest / width: p25 %.2f median %.2f p75 %.2f; nearest min %.2f (%d slimes)" % [d3[d3.size() / 4], med, d3[d3.size() * 3 / 4], nn[0], d3.size()])
 	check(med > 0.62 and med < 0.86, "jammed crowd is a pile: 3 nearest ≈ 0.75 width, got %.2f" % med)
-	check(nn[0] > 0.1, "no two slimes on one spot, nearest min %.2f" % nn[0])
+	# Almost no two slimes on one spot. Since 2026-10-09 the step is checked against cliffs / walls
+	# along its whole length (a crowd step is often over half a cell): it no longer cuts rock corners
+	# by the gap, the pile there is a bit denser and a few (was 0, now ~4 %) end up nearly on top of
+	# each other.
+	var close := 0
+	for v in nn:
+		if v < 0.1:
+			close += 1
+	check(close <= nn.size() / 20, "almost no two slimes on one spot: %d of %d closer than 0.1 width (≤ 5 %%)" % [close, nn.size()])
 
 
 func _test_crowd_gets_through() -> void:
@@ -421,7 +431,7 @@ func _test_wall() -> void:
 	# docs/concept.md «Будівництво»: wall 2×2, 300 hp; slimes walk round it, a full wall across the
 	# pass is still a way (they will chew through once they bite; for now they walk through).
 	var r := load("res://game/objects/wall/wall_rig.tres") as BlockRig
-	check(r.footprint == Vector2i(2, 2) and is_equal_approx(r.max_hp, 300.0) and is_equal_approx(r.path_cost, 60.0), "wall rig: 2×2, 300 hp, path cost 60")
+	check(r.footprint == Vector2i(1, 1) and is_equal_approx(r.max_hp, 300.0) and r.path_cost >= FlowField.SOLID and r.solid, "wall rig: 1×1, 300 hp, solid, path cost ≥ SOLID (%.0f)" % r.path_cost)
 	# 9×5 field, a 2-cell wall across rows 1..2 at column 4: round it (rows 0 / 3..4) is cheaper.
 	var g := _small_grid(9, 5, [])
 	var f := FlowField.new()
@@ -439,3 +449,107 @@ func _test_wall() -> void:
 	w.hp = w.rig.max_hp
 	check(not w.damage(120.0) and is_equal_approx(w.hp, 180.0) and w.damage(180.0) and w.hp == 0.0, "wall hp: 300 − 120 = 180, then 0 → destroyed")
 	w.free()
+
+
+## Every step of a line moves to a side neighbour (no corner-only joints slimes slip through).
+func _four_connected(start: Vector2i, cells: Array[Vector2i]) -> bool:
+	var p := start
+	for c in cells:
+		if absi(c.x - p.x) + absi(c.y - p.y) != 1:
+			return false
+		p = c
+	return true
+
+
+func _test_wall_line() -> void:
+	# docs/concept.md «Будівництво»: the wall is painted; between two touch samples the cells are filled
+	# in, each a side neighbour of the one before (no corner-only joints slimes slip through).
+	var straight := Builder.cells_between(Vector2i(2, 3), Vector2i(8, 3))
+	check(straight.size() == 6 and straight.back() == Vector2i(8, 3) and _four_connected(Vector2i(2, 3), straight), "straight stroke: 6 cells to the new sample (%s)" % [straight])
+	var diag := Builder.cells_between(Vector2i(2, 2), Vector2i(8, 8))
+	var far := 0.0
+	for c in diag:
+		far = maxf(far, absf(float(c.x - 2) - float(c.y - 2)) / sqrt(2.0))
+	check(diag.size() == 12 and _four_connected(Vector2i(2, 2), diag) and far <= 1.0, "diagonal stroke: a 4-connected staircase of 12 cells hugging the line (off ≤ %.2f)" % far)
+	var steep := Builder.cells_between(Vector2i(5, 1), Vector2i(3, 9))
+	check(steep.size() == 10 and steep.back() == Vector2i(3, 9) and _four_connected(Vector2i(5, 1), steep), "steep slanted stroke: 10 cells, 4-connected")
+	check(Builder.cells_between(Vector2i(4, 4), Vector2i(4, 4)).is_empty(), "same cell: nothing in between")
+	var cost := Builder.line_cost(load("res://game/core/build_catalog.tres").items[3], 7)
+	check(cost == {"crystal": 70}, "wall price: 10 a piece × 7 = 70 (%s)" % [cost])
+
+
+## A swarm on a 24×14 field, target at (23, 7), 60 slimes on the left, walls = solid cells (as
+## GameMap.walk_blocked() gives them) that cost FlowField.SOLID+ in the field (as walls do).
+func _wall_run(walls: Array, seconds: float) -> Dictionary:
+	var rig := load("res://game/objects/slime/slime_rig.tres") as SlimeRig
+	var wr := load("res://game/objects/wall/wall_rig.tres") as BlockRig
+	var g := _small_grid(24, 14, [])
+	var costs := {}
+	var solid := g.blocked.duplicate()
+	for c in walls:
+		costs[c.y * g.cols + c.x] = wr.path_cost
+		solid[c.y * g.cols + c.x] = 1
+	var f := FlowField.new()
+	var t: Array[Vector2i] = [Vector2i(23, 7)]
+	f.build(g, t, costs)
+	var s := SwarmSim.new()
+	s.setup(256, g.cols, g.rows)
+	var sw := Swarm.new()
+	s.cell_capacity = sw.cell_capacity
+	s.push_strength = sw.push_strength
+	s.spread_strength = sw.spread_strength
+	s.body = sw.body
+	s.cohesion = sw.cohesion
+	sw.free()
+	s.solid = solid
+	seed(5)
+	for k in 60:
+		s.spawn(Vector2(randf_range(20, 200), randf_range(30, 300)), 1.0, 1.0, randf(), randf())
+	s.bin()
+	var in_wall := 0
+	var max_x := 0.0
+	for k in int(60 * seconds):
+		s.step(1.0 / 60.0, f, g, _crawl_cache, rig.width_px())
+		for i in s.count:
+			var c := Vector2i(int(s.px[i] / MapGrid.CELL.x), int(s.py[i] / MapGrid.CELL.y))
+			if solid[c.y * g.cols + c.x] == 1:
+				in_wall += 1
+			max_x = maxf(max_x, s.px[i])
+		if s.count == 0:
+			break
+	var xs := PackedFloat32Array()
+	for i in s.count:
+		xs.append(s.px[i])
+	xs.sort()
+	return {"left": s.count, "in_wall": in_wall, "max_x": max_x, "median_x": xs[xs.size() / 2] if xs.size() > 0 else 0.0}
+
+
+var _crawl_cache: SlimeCrawl
+
+
+func _test_wall_holds_slimes() -> void:
+	# docs/concept.md «Будівництво»: a slime never gets over a wall; no way round — they crowd at it.
+	_crawl_cache = SlimeCrawl.new(load("res://game/objects/slime/slime_rig.tres") as SlimeRig)
+	var across := []
+	for r in 14:
+		across.append(Vector2i(12, r))
+	var a := _wall_run(across, 40.0)
+	var wall_x := 12 * MapGrid.CELL.x
+	check(a.left == 60 and a.max_x < wall_x and a.in_wall == 0, "wall across the whole field: nobody gets over (left %d, furthest x %.0f < %.0f, in wall %d)" % [a.left, a.max_x, wall_x, a.in_wall])
+	check(a.median_x > wall_x - 4.0 * MapGrid.CELL.x, "…they crowd at the wall (median x %.0f, wall at %.0f)" % [a.median_x, wall_x])
+	# A gap far from the straight way (row 1): they walk round through it, nobody through the wall.
+	var gap := []
+	for r in 14:
+		if r != 1:
+			gap.append(Vector2i(12, r))
+	var b := _wall_run(gap, 90.0)
+	check(b.left == 0 and b.in_wall == 0, "wall with a gap: all go round through it (left %d, in wall %d)" % [b.left, b.in_wall])
+	# Two walls touching only at a corner: no slipping between them diagonally.
+	var corner := []
+	for r in 7:
+		corner.append(Vector2i(12, r))
+	for r in range(7, 14):
+		corner.append(Vector2i(13, r))
+	var c := _wall_run(corner, 40.0)
+	check(c.left == 60 and c.in_wall == 0 and c.max_x < 14 * MapGrid.CELL.x, "walls touching at a corner: nobody slips through (left %d, furthest x %.0f)" % [c.left, c.max_x])
+

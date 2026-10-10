@@ -77,6 +77,12 @@ func _min_zoom() -> float:
 	return maxf(zoom_min, maxf(vp.x / size.x, vp.y / size.y))
 
 
+## Zoom to `z` keeping the map point under `screen_pos` where it is (build mode zooms in).
+func zoom_to(z: float, screen_pos: Vector2) -> void:
+	_zoom_at(z / maxf(0.001, zoom.x), screen_pos)
+	_clamp()
+
+
 func _zoom_at(factor: float, screen_pos: Vector2) -> void:
 	var before := get_canvas_transform().affine_inverse() * screen_pos
 	var z := clampf(zoom.x * factor, _min_zoom(), zoom_max)

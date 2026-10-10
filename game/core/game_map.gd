@@ -156,6 +156,18 @@ func building_costs() -> Dictionary:
 	return out
 
 
+## Per cell, 1 = slimes can not enter: cliffs / pits (grid.blocked) and the cells of objects that
+## blocks_walk() (walls). SwarmSim.solid.
+func walk_blocked() -> PackedByteArray:
+	var out := grid.blocked.duplicate()
+	for o in objects():
+		if o.blocks_walk():
+			for c in o.footprint_cells():
+				if grid.inside(c.x, c.y):
+					out[c.y * grid.cols + c.x] = 1
+	return out
+
+
 func build_flow_field() -> FlowField:
 	var f := FlowField.new()
 	f.build(grid, target_cells(), building_costs())

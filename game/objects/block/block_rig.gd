@@ -14,9 +14,13 @@ extends Resource
 @export_group("Game")
 @export_range(1.0, 5000.0, 1.0) var max_hp := 300.0
 ## Extra cost for slimes to pass through a footprint cell (FlowField: a cell costs 1 + this), so they
-## walk round unless the detour is longer than this many cells. Turrets and drills: 8.
-@export_range(0.0, 1000.0, 1.0) var path_cost := 60.0
+## walk round unless the detour is longer than this many cells. Turrets and drills: 8. The wall: 10000
+## (≥ FlowField.SOLID) — round it whenever there is a way, never diagonally past its corner.
+@export_range(0.0, 1000.0, 1.0, "or_greater") var path_cost := 60.0
 ## Radius that clears the corruption, cells beyond the footprint.
 @export_range(0.0, 30.0, 0.5) var clear_radius := 0.0
+## Slimes can not walk into its cells at all (the wall): SwarmSim.solid. With a path_cost of
+## FlowField.SOLID or more they also walk round it whenever there is a way round.
+@export var solid := false
 ## A store (group "storage"): drones bring crystals here as to the core.
 @export var store := false

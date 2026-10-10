@@ -37,11 +37,16 @@ static func free_slots(map: GameMap) -> Array[CrystalVein]:
 	return out
 
 
-## The vein whose free slot is under map point `p` (a tap with the drill chosen), else null. The slot
-## is the square where a drill with rig `r` will stand (Drill.slot_rect()), a bit larger for a finger.
-static func slot_at(map: GameMap, p: Vector2, r: DrillRig) -> CrystalVein:
+## Map px square of a vein's slot (its 2×2 cells; the drill stands on them).
+static func slot_rect(v: CrystalVein) -> Rect2:
+	return Rect2(Vector2(v.drill_slot_cell()) * MapGrid.CELL, MapGrid.CELL * 2.0)
+
+
+## The vein whose free slot is under map point `p` (a tap with the drill chosen), else null. A bit
+## larger than the slot, for a finger.
+static func slot_at(map: GameMap, p: Vector2) -> CrystalVein:
 	for v in free_slots(map):
-		if Drill.slot_rect(v, r).grow(8.0).has_point(p):
+		if slot_rect(v).grow(8.0).has_point(p):
 			return v
 	return null
 
@@ -93,6 +98,72 @@ static func problem(map: GameMap, item: BuildItem, o: MapObject, wallet: Wallet)
 	if wallet and not wallet.can_pay(item.cost):
 		return NO_MONEY
 	return ""
+
+
+## ---------- painted line building (the wall)
+## The wall is painted cell by cell (BuildMenu); old walls of the same kind can be joined and painted
+## over — those cells are not built again.
+
+## Cells where `item` (a line, e.g. the wall) already stands: they can be joined, not built again.
+static func line_existing(map: GameMap, item: BuildItem) -> Dictionary:
+	var out := {}
+	for o in map.objects():
+		if o.scene_file_path == item.scene.resource_path:
+			for c in o.footprint_cells():
+				out[c] = true
+	return out
+
+
+## Cells from `a` (not included) to `b` (included), each a side neighbour of the one before: a fast or
+## slanted finger stroke between two touch samples is filled in as a staircase near the straight line
+## (two cells touching only at a corner would let slimes through).
+static func cells_between(a: Vector2i, b: Vector2i) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	var c := a
+	var d := b - a
+	var n := absi(d.x) + absi(d.y)
+	var sx := signi(d.x)
+	var sy := signi(d.y)
+	for k in n:
+		# Step along the axis that keeps the cell nearest the line a → b.
+		var cx := c + Vector2i(sx, 0)
+		var cy := c + Vector2i(0, sy)
+		var ex := absf(float((cx.x - a.x) * d.y - (cx.y - a.y) * d.x)) if sx != 0 else INF
+		var ey := absf(float((cy.x - a.x) * d.y - (cy.y - a.y) * d.x)) if sy != 0 else INF
+		c = cx if ex <= ey else cy
+		out.append(c)
+	return out
+
+
+## Total price of `n` new pieces of `item`.
+static func line_cost(item: BuildItem, n: int) -> Dictionary:
+	var out := {}
+	for res in item.cost:
+		out[res] = int(item.cost[res]) * n
+	return out
+
+
+## Builds a piece of `item` on every cell of `cells` (old pieces skipped), all or nothing: the whole
+## price must be there. Returns the new pieces (empty + `why` filled if nothing was built).
+static func build_line(map: GameMap, item: BuildItem, cells: Array[Vector2i], wallet: Wallet, why: Array = []) -> Array[MapObject]:
+	var built: Array[MapObject] = []
+	var existing := line_existing(map, item)
+	var todo: Array[Vector2i] = []
+	for c in cells:
+		if not existing.has(c) and not todo.has(c):
+			todo.append(c)
+	if todo.is_empty():
+		why.append("нема що будувати")
+		return built
+	if wallet and not wallet.can_pay(line_cost(item, todo.size())):
+		why.append(NO_MONEY)
+		return built
+	for c in todo:
+		var w := []
+		var o := build(map, item, c, wallet, w)
+		if o:
+			built.append(o)
+	return built
 
 
 ## Builds `item` at `cell`: checks, takes the cost, adds the object to the map's World.

@@ -53,6 +53,15 @@ func show_scene(scene: PackedScene) -> void:
 		rig = (o as Turret).get_rig()
 		o.free()
 		return
+	if o is Wall and (o as Wall).wall_rig() and (o as Wall).wall_rig().pillar:
+		# The wall: its pillar sprite (what a lone piece looks like on the map).
+		var t := (o as Wall).wall_rig().pillar
+		rig = null
+		block = null
+		_items = [[t, Transform2D.IDENTITY, Rect2(Vector2.ZERO, t.get_size()), Color.WHITE]]
+		o.free()
+		queue_redraw()
+		return
 	if o is BlockBuilding:
 		rig = null
 		_items.clear()

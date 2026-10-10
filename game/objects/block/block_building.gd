@@ -31,6 +31,10 @@ func get_path_cost() -> float:
 	return rig.path_cost if rig else 0.0
 
 
+func blocks_walk() -> bool:
+	return rig != null and rig.solid
+
+
 func get_clear_radius() -> float:
 	return rig.clear_radius if rig else 0.0
 

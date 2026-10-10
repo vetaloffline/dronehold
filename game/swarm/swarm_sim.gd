@@ -321,6 +321,12 @@ func nearest_in_cone(pos: Vector2, max_range: float, dir: Vector2, cos_half: flo
 ## Move every slime one tick. Returns the number that reached a target cell (they are removed).
 ## Hot loop: the arrays are moved into locals for the loop (no member lookups, and a sole owner
 ## means no copy-on-write), then moved back.
+## Cells slimes can not enter besides the map's cliffs and pits (`grid.blocked`): GameMap.walk_blocked()
+## — the walls too (index r * cols + c, 1 = solid). Empty = only grid.blocked. A slime that stands in a
+## solid cell (a wall was built on it) may walk out of it.
+var solid := PackedByteArray()
+
+
 func step(dt: float, field: FlowField, grid: MapGrid, crawl: SlimeCrawl, width_px: float) -> int:
 	var period := crawl.period
 	var cycle := crawl.inch_cycle()
@@ -352,7 +358,9 @@ func step(dt: float, field: FlowField, grid: MapGrid, crawl: SlimeCrawl, width_p
 	var w := cols
 	var dirs := field.dir
 	var dists := field.dist
-	var blocked := grid.blocked
+	var blocked := solid if solid.size() == cols * rows else grid.blocked
+	var max_step := minf(cw_px, ch_px) * 0.45
+	var max_step2 := max_step * max_step
 	var counts := cell_count
 	var sum_x := cell_sum_x
 	var sum_y := cell_sum_y
@@ -498,19 +506,47 @@ func step(dt: float, field: FlowField, grid: MapGrid, crawl: SlimeCrawl, width_p
 						sy += oy * k * 0.75
 			vx += sx * spring_k
 			vy += sy * spring_k
-		# Do not step into cliffs / pits: try both axes, then each alone.
+		# Do not step into cliffs / pits / walls: try both axes, then each alone. Not between two solid
+		# cells that touch only at a corner either. (In a solid cell already — walk out freely.)
+		# A long step (a crowd pushing hard, a long frame) is checked in pieces under half a cell, else
+		# it could land behind a 1-cell wall: the check looks only at where each piece lands.
 		var nx := x + vx
 		var ny := y + vy
-		var ncx := clampi(int(nx / cw_px), 0, nc_max)
-		var nry := clampi(int(ny / ch_px), 0, nr_max)
-		if blocked[nry * w + ncx] == 1:
-			if blocked[r * w + ncx] == 0:
-				ny = y
-			elif blocked[nry * w + c] == 0:
-				nx = x
-			else:
-				nx = x
-				ny = y
+		if blocked[ci] == 0:
+			var parts := 1
+			var step2 := vx * vx + vy * vy
+			if step2 > max_step2:
+				parts = int(ceil(sqrt(step2) / max_step))
+			var dx := vx / parts
+			var dy := vy / parts
+			nx = x
+			ny = y
+			var cc := c
+			var cr := r
+			for _p in parts:
+				var tx := nx + dx
+				var ty := ny + dy
+				var tcx := clampi(int(tx / cw_px), 0, nc_max)
+				var tcy := clampi(int(ty / ch_px), 0, nr_max)
+				if blocked[tcy * w + tcx] == 1:
+					if blocked[cr * w + tcx] == 0:
+						ty = ny
+					elif blocked[tcy * w + cc] == 0:
+						tx = nx
+					else:
+						# Straight into the wall: the whole step is off (as before the pieces), so a
+						# pressed crowd stays a loose pile instead of packing onto the wall face.
+						nx = x
+						ny = y
+						break
+				elif tcx != cc and tcy != cr and blocked[cr * w + tcx] == 1 and blocked[tcy * w + cc] == 1:
+					nx = x
+					ny = y
+					break
+				nx = tx
+				ny = ty
+				cc = clampi(int(nx / cw_px), 0, nc_max)
+				cr = clampi(int(ny / ch_px), 0, nr_max)
 		lpx[i] = nx
 		lpy[i] = ny
 		# The arrays are float32: a slime right at a wall (575.99997) rounds onto it (576.0 =
@@ -518,7 +554,7 @@ func step(dt: float, field: FlowField, grid: MapGrid, crawl: SlimeCrawl, width_p
 		# stay where it was (that position was valid).
 		var sc := clampi(int(lpx[i] / cw_px), 0, nc_max)
 		var sr := clampi(int(lpy[i] / ch_px), 0, nr_max)
-		if blocked[sr * w + sc] == 1:
+		if blocked[ci] == 0 and blocked[sr * w + sc] == 1:
 			lpx[i] = x
 			lpy[i] = y
 		if vx > 0.05:
