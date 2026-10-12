@@ -188,6 +188,55 @@ func _free_cell(map: GameMap, item: BuildItem) -> Vector2i:
 	return Vector2i(-1, -1)
 
 
+## A relay put straight onto the map (no build rules) next to vein `v`, its drill slot inside the
+## relay's build radius: no vein slot of map_03 is inside the core's. Free it after the test.
+func _relay_near(map: GameMap, v: CrystalVein) -> MapObject:
+	var relay_i := _item(load("res://game/core/build_catalog.tres") as BuildCatalog, "Ретранслятор")
+	var s := v.drill_slot_cell()
+	for ring in range(2, 7):
+		for dy in range(-ring, ring + 1):
+			for dx in range(-ring, ring + 1):
+				if maxi(absi(dx), absi(dy)) != ring:
+					continue
+				var o := Builder.make(relay_i, s + Vector2i(dx, dy))
+				var near := true
+				for c in Builder.slot_cells(v):
+					near = near and (Vector2(c) + Vector2(0.5, 0.5)).distance_to(o.build_centre_cells()) <= o.build_radius_cells()
+				if near and map.placement_problem(o) == "":
+					o.name = "TestRelay"
+					map.world().add_child(o)
+					return o
+				o.free()
+	return null
+
+
+## First top-left cell of `item` within `from`…`to` cells (footprint centre to the core's centre)
+## where Builder.problem() says `want`, else (-1, -1). `min_in` / `max_in` = how many of its cells
+## must be inside the build radius.
+func _cell_by_problem(map: GameMap, item: BuildItem, want: String, from: float, to: float, min_in := 0, max_in := 0) -> Vector2i:
+	var mid := _core.build_centre_cells()
+	var near := Builder.radius_cells(map)
+	var g := map.grid
+	var o := Builder.make(item, Vector2i.ZERO)  # one probe, moved cell by cell
+	var found := Vector2i(-1, -1)
+	for r in g.rows:
+		for c in g.cols:
+			if found.x >= 0:
+				break
+			o.cell = Vector2i(c, r)
+			var d := o.build_centre_cells().distance_to(mid)
+			if d < from or d > to:
+				continue
+			var n_in := 0
+			for fc in o.footprint_cells():
+				if g.inside(fc.x, fc.y) and near[fc.y * g.cols + fc.x] == 1:
+					n_in += 1
+			if n_in >= min_in and n_in <= max_in and Builder.problem(map, item, o, null) == want:
+				found = o.cell
+	o.free()
+	return found
+
+
 ## Left end of `n` free buildable cells in a row near the core (for a wall), else (-1, -1).
 func _wall_row(map: GameMap, n: int) -> Vector2i:
 	var bl := Builder.blocked_cells(map, null)
@@ -273,13 +322,20 @@ func _test_builder(map: GameMap) -> void:
 	if slots.is_empty():
 		return
 	var v := slots[0]
-	# Drill: only into a free vein slot.
+	var built: Array[MapObject] = []
+	# Drill: only into a free vein slot inside the build radius.
+	var d_out := Builder.make(drill_i, v.drill_slot_cell())
+	check(Builder.problem(map, drill_i, d_out, w) == Builder.OUT_OF_RADIUS, "drill in a slot outside the build radius: «%s»" % Builder.OUT_OF_RADIUS)
+	d_out.free()
+	var fix := _relay_near(map, v)
+	check(fix != null, "a relay fixture next to the vein slot")
+	if fix:
+		built.append(fix)
 	var off := Builder.make(drill_i, v.drill_slot_cell() + Vector2i(4, 4))
 	check(Builder.problem(map, drill_i, off, w) == Builder.NOT_A_SLOT, "drill off a slot: «%s»" % Builder.NOT_A_SLOT)
 	off.free()
 	var tap := Builder.slot_rect(v).get_center()
 	check(Builder.slot_at(map, tap) == v, "a tap inside the highlighted slot finds its vein")
-	var built: Array[MapObject] = []
 	var d := Builder.build(map, drill_i, v.drill_slot_cell(), w) as Drill
 	check(d != null and d.vein == v and w.amount("crystal") == 900, "drill built in the slot, −100 (wallet %d)" % w.amount("crystal"))
 	if d:
@@ -341,6 +397,47 @@ func _test_builder(map: GameMap) -> void:
 	check(relay != null and relay.is_in_group("storage") and relay.drone_pads().size() == 2, "relay built: a store with 2 drone pads")
 	if relay:
 		built.append(relay)
+	# Build radius: the core's 14 cells beyond its 6×6 footprint, a relay's 8 beyond its 2×2, from the
+	# footprint centre; every cell of a building must be inside one of them.
+	var cr := _core.build_radius_cells()
+	check(is_equal_approx(cr, 17.0) and relay != null and is_equal_approx(relay.build_radius_cells(), 9.0), "build radius from the centre: core 14 + 3 = 17, relay 8 + 1 = 9 (got %.1f, %.1f)" % [cr, relay.build_radius_cells() if relay else 0.0])
+	var oc := _cell_by_problem(map, mg_i, Builder.OUT_OF_RADIUS, cr + 1.0, cr + 3.0)
+	check(oc.x >= 0, "free ground just past the core's build radius: «%s» (%s)" % [Builder.OUT_OF_RADIUS, oc])
+	var half := _cell_by_problem(map, relay_i, Builder.OUT_OF_RADIUS, cr - 2.0, cr + 2.0, 1, 3)
+	check(half.x >= 0, "a relay half outside the radius: «%s» (%s)" % [Builder.OUT_OF_RADIUS, half])
+	if oc.x >= 0:
+		# A relay inside the radius, near the edge: the cell past the old edge can be built on now.
+		var mg_mid := Vector2(oc) + Vector2(1, 1)
+		var r2c := Vector2i(-1, -1)
+		var o := Builder.make(relay_i, Vector2i.ZERO)
+		for dy in range(-8, 8):
+			for dx in range(-8, 8):
+				if r2c.x >= 0:
+					break
+				o.cell = Vector2i(roundi(mg_mid.x) + dx, roundi(mg_mid.y) + dy)
+				var covers := true
+				for fc in [oc, oc + Vector2i(1, 0), oc + Vector2i(0, 1), oc + Vector2i(1, 1)]:
+					covers = covers and (Vector2(fc) + Vector2(0.5, 0.5)).distance_to(o.build_centre_cells()) <= o.build_radius_cells()
+				if covers and Builder.problem(map, relay_i, o, null) == "":
+					r2c = o.cell
+		o.free()
+		var r2: BlockBuilding = null
+		if r2c.x >= 0:
+			r2 = Builder.build(map, relay_i, r2c, w) as BlockBuilding
+		check(r2 != null, "a relay inside the core's radius, next to its edge (%s)" % r2c)
+		if r2:
+			var probe2 := Builder.make(mg_i, oc)
+			check(Builder.problem(map, mg_i, probe2, w) == "", "after the relay the cell past the old edge is fine")
+			probe2.free()
+			var t2 := Builder.build(map, mg_i, oc, w)
+			check(t2 is Turret, "machine gun built in the relay's radius")
+			if t2:
+				built.append(t2)
+			check(r2.damage(1.0e6), "the relay is destroyed")
+			r2.free()  # it would go at the end of the frame (queue_free)
+			var probe4 := Builder.make(mg_i, oc)
+			check(map.objects().has(t2) and not Builder.in_radius(map, probe4.footprint_cells()), "the turret built there stays, its cells are outside the radius now")
+			probe4.free()
 	for o in built:
 		o.free()
 	w.add("crystal", 200 - w.amount("crystal"))
@@ -366,6 +463,20 @@ func _test_build_menu(map: GameMap) -> void:
 	var core_c := _core.cell + Vector2i(3, 3)
 	var free0 := _free_cell(map, _item(bm.catalog, "Кулемет"))
 	check(ov0.show_map and ov0.blocked_shown(rock.x, rock.y) and ov0.blocked_shown(core_c.x, core_c.y) and not ov0.blocked_shown(free0.x, free0.y), "build mode: map grid on, cliff and core cells red, free ground not")
+	# Build radius: buildable ground outside it is red, inside it is not; its edge is a cyan line.
+	var occ := {}
+	for o in map.objects():
+		for c in o.footprint_cells():
+			occ[c] = true
+	var out_c := Vector2i(-1, -1)
+	var core_mid := _core.build_centre_cells()
+	for r in map.grid.rows:
+		for c in map.grid.cols:
+			var dd := (Vector2(c, r) + Vector2(0.5, 0.5)).distance_to(core_mid)
+			if out_c.x < 0 and dd > _core.build_radius_cells() + 1.0 and dd < _core.build_radius_cells() + 4.0 and map.grid.can_build(c, r) and not occ.has(Vector2i(c, r)) and not ov0.inside_shown(c, r):
+				out_c = Vector2i(c, r)
+	check(out_c.x >= 0 and ov0.blocked_shown(out_c.x, out_c.y), "free ground past the build radius is red (%s)" % out_c)
+	check(ov0.inside_shown(free0.x, free0.y) and ov0.edge_count() > 0, "free ground near the core is inside the radius; the edge is drawn (%d cell sides)" % ov0.edge_count())
 	var pics := []
 	for i in 5:
 		var p := bm.get_node("Root/Cards/Card%d/Picture" % i) as ObjectPortrait
@@ -476,18 +587,49 @@ func _test_build_menu(map: GameMap) -> void:
 	_drag(map, [p1 + Vector2i(-2, 0), p1 + Vector2i(-2, -2)])
 	check(bm.line_new_cells().size() == 2, "a stroke from the old wall: only 2 new pieces")
 	bm.clear_ghost()
+	# A stroke over the edge of the build radius: the cell outside is skipped and flashes red.
+	var edge_in := Vector2i(-1, -1)
+	for r in map.grid.rows:
+		for c in map.grid.cols - 1:
+			if edge_in.x < 0 and ov.inside_shown(c, r) and not ov.blocked_shown(c, r) and not ov.inside_shown(c + 1, r) and map.grid.can_build(c + 1, r) and not occ.has(Vector2i(c + 1, r)):
+				edge_in = Vector2i(c, r)
+	check(edge_in.x >= 0, "free ground on both sides of the radius edge (%s)" % edge_in)
+	if edge_in.x >= 0:
+		bm.paint_begin(map.grid.cell_center(edge_in))
+		bm.paint_to(map.grid.cell_center(edge_in + Vector2i(1, 0)))
+		bm.paint_end(false)
+		check(bm.painted.size() == 1 and bm.painted[0] == edge_in and ov.bad_cell == edge_in + Vector2i(1, 0), "a wall stroke over the radius edge: the cell outside is skipped and flashes red")
+		bm.clear_ghost()
 	drill_card_restore_cam(bm, cam)
+	# The relay ghost shows the build radius it adds: a dashed ellipse around its footprint centre.
+	check(bm.ghost == null and ov.reach_px == 0.0, "no ghost: no radius ellipse")
+	var relay_card := bm.get_node("Root/Cards/Card4") as Button
+	relay_card.pressed.emit()
+	var rcell := _free_cell(map, bm.item)
+	bm.place_at((Vector2(rcell) + Vector2(1, 1)) * MapGrid.CELL)
+	check(bm.ghost != null and bm.ghost.cell == rcell and is_equal_approx(ov.reach_px, 9.0 * MapGrid.CELL.x) and ov.reach_centre == (Vector2(rcell) + Vector2(1, 1)) * MapGrid.CELL, "relay ghost: its future radius ellipse, 9 cells = %.0f px (got %.0f)" % [9.0 * MapGrid.CELL.x, ov.reach_px])
+	(bm.get_node("Root/Cards/Card1") as Button).pressed.emit()
+	bm.place_at((Vector2(rcell) + Vector2(1, 1)) * MapGrid.CELL)
+	check(bm.ghost is Turret and ov.reach_px == 0.0, "a machine gun ghost has no radius ellipse")
+	bm.clear_ghost()
 	var walls: Array[MapObject] = []
 	for o in map.objects():
 		if o is Wall:
 			walls.append(o)
 	for o in walls:
 		o.free()
-	# Drill: only into a highlighted free slot.
+	# Drill: only into a highlighted free slot (inside the build radius: a relay fixture by the vein).
+	var all_slots := Builder.free_slots(map)
+	var fix: MapObject = null
+	if all_slots.size() > 0:
+		fix = _relay_near(map, all_slots[0])
 	var drill_card := bm.get_node("Root/Cards/Card0") as Button
 	drill_card.pressed.emit()
-	var slots := Builder.free_slots(map)
-	check(slots.size() > 0 and ov.slots.size() == slots.size(), "drill chosen: the free vein slots light up (%d)" % ov.slots.size())
+	var slots: Array[CrystalVein] = []
+	for v in Builder.free_slots(map):
+		if Builder.in_radius(map, Builder.slot_cells(v)):
+			slots.append(v)
+	check(fix != null and slots.size() > 0 and slots.size() < all_slots.size() and ov.slots.size() == slots.size(), "drill chosen: only the free vein slots inside the build radius light up (%d of %d)" % [ov.slots.size(), all_slots.size()])
 	if slots.size() > 0:
 		var sc := slots[0].drill_slot_cell()
 		check(not ov.blocked_shown(sc.x, sc.y), "drill chosen: its free slot is not red")
@@ -507,6 +649,8 @@ func _test_build_menu(map: GameMap) -> void:
 		check(d is Drill and (d as Drill).vein == v and w.amount("crystal") == had - 100 and ov.slots.size() == slots.size() - 1, "✔ builds the drill (−100), its slot no longer lights up")
 		if d:
 			d.free()
+	if fix:
+		fix.free()
 	toggle.pressed.emit()
 	check(not bm.is_open and bm.item == null and bm.ghost == null and not ov.show_map, "✕ closes the build mode, the map grid goes")
 	if built:
@@ -601,6 +745,67 @@ func _process(_dt: float) -> bool:
 				check(card.offset_right - card.offset_left > w3 + 100.0, "the card widens for the 4th tile (%.0f → %.0f)" % [w3, card.offset_right - card.offset_left])
 				info.select(null)
 				gl.free()
+			if _frame == 33:
+				# Relay: tap → hp / cleared radius / drone pads; the ground shows the cleared ellipse.
+				var info := _main.get_node("ObjectInfo") as ObjectInfo
+				var hl := map.get_node("Shadows/SelectionHighlight") as SelectionHighlight
+				var cat := load("res://game/core/build_catalog.tres") as BuildCatalog
+				var relay_i := _item(cat, "Ретранслятор")
+				var relay := Builder.make(relay_i, _free_cell(map, relay_i)) as BlockBuilding
+				map.world().add_child(relay)
+				check(is_equal_approx(relay.clear_radius_px(), 160.0) and is_equal_approx(_core.clear_radius_px(), 544.0), "cleared radius px: relay (4 + 1)·32 = 160, core (14 + 3)·32 = 544 (got %.0f, %.0f)" % [relay.clear_radius_px(), _core.clear_radius_px()])
+				var at := _screen_of(map, relay.position - Vector2(0, 10))
+				_click(at, at)
+				check(info.selected == relay, "a tap on the relay selects it")
+				check((info.get_node("Root/Card/Body/Content/Row/Info/Name") as Label).text == "Ретранслятор", "card: name «Ретранслятор»")
+				var vals := [info.tile_value(0), info.tile_value(1), info.tile_value(2), info.tile_value(3)]
+				check(vals == ["200/200", "5", "2", "9"], "relay card: hp 200/200, cleared 5 cells, 2 pads, build radius 9 (got %s)" % [vals])
+				check((info.get_node("Root/Card/Body/Content/Row/Info/Stats/Stat4") as Control).visible, "relay: 4 tiles")
+				var pic := info.get_node("Root/Card/Body/Content/Row/Portrait/Picture") as ObjectPortrait
+				check(pic.rig == null and pic.block == null and pic._items.size() == 2, "relay portrait: a snapshot of its base and dish sprites (%d)" % pic._items.size())
+				check(hl.target == relay and hl.clear and is_equal_approx(hl.range_px, 160.0), "highlight: the relay's cleared ellipse (160 px)")
+				relay.damage(50.0)
+				info._process(0.0)
+				check(info.tile_value(0) == "150/200", "relay hp updates live: %s" % info.tile_value(0))
+				info.select(null)
+				check(not hl.clear and hl.target == null, "selection cleared")
+				# Sprites from the rig: base on the ground point, dish on the mast top.
+				var rr := relay as Relay
+				var ra := rr.art()
+				check(rr != null and rr.has_art() and is_equal_approx(rr.scale.x, ra.map_scale), "relay is drawn from sprites at map_scale %.3f" % ra.map_scale)
+				var dish := rr.get_node("Dish") as Sprite2D
+				check(dish.visible and dish.texture == ra.dishes[rr.dish_view] and dish.position.is_equal_approx(ra.housing - ra.ground) and dish.offset == -ra.dish_pivot, "dish: view %d at the housing" % rr.dish_view)
+				check((rr.get_node("Base") as Sprite2D).position == -ra.ground and (rr.get_node("BaseShadow") as Sprite2D).texture == ra.base_shadow, "base and its shadow on the ground point")
+				# Spin with 16 views (the same texture 16 times; the drawn views wait for approval).
+				var r16 := ra.duplicate() as RelayRig
+				var tex: Array[Texture2D] = []
+				var azs := PackedFloat32Array()
+				for i in 16:
+					tex.append(ra.dishes[0])
+					azs.append(fposmod(29.2 + 22.5 * i, 360.0))
+				r16.dishes = tex
+				r16.dish_azimuths = azs
+				r16.spin_speed = 45.0
+				rr.rig = r16
+				rr.dish_angle = 29.2
+				rr._update_dish()
+				var v0 := rr.dish_view
+				rr._process(1.0)  # +45°: two views on
+				check(v0 == 0 and rr.dish_view == 2 and is_equal_approx(rr.dish_angle, 74.2), "spin 45°/s: after 1 s view 0 → 2 (angle %.1f, view %d)" % [rr.dish_angle, rr.dish_view])
+				check(r16.nearest_view(29.2 - 11.0) == 0 and r16.nearest_view(29.2 - 12.0) == 15 and r16.nearest_view(359.0) == 15, "nearest view wraps round 360°")
+				var sh := rr.get_node("DishShadow") as Sprite2D
+				check(sh.texture == dish.texture and sh.position.is_equal_approx(dish.position + r16.dish_shadow_offset) and is_equal_approx(sh.scale.y, r16.dish_shadow_squash), "dish shadow follows the view, shifted and flattened")
+				# The real rig: 16 drawn views, one full turn a second (all 16 views in 1 s).
+				rr.rig = ra
+				check(ra.dishes.size() == 16 and ra.dish_azimuths.size() == 16 and is_equal_approx(ra.spin_speed, 360.0), "relay rig: 16 dish views, 360°/s (got %d views, %.0f°/s)" % [ra.dishes.size(), ra.spin_speed])
+				rr.dish_angle = ra.dish_azimuths[1]
+				rr._update_dish()
+				var seen := {}
+				for i in 16:
+					rr._process(1.0 / 16.0)
+					seen[rr.dish_view] = true
+				check(seen.size() == 16 and is_equal_approx(rr.dish_angle, ra.dish_azimuths[1]), "spin 360°/s: all 16 views within 1 s, back to the start (%d views, angle %.1f)" % [seen.size(), rr.dish_angle])
+				relay.free()
 			if _frame == 34:
 				# Drill: tap → its storage on the card; full storage stops the drill.
 				var info := _main.get_node("ObjectInfo") as ObjectInfo

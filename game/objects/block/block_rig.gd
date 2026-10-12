@@ -19,6 +19,9 @@ extends Resource
 @export_range(0.0, 1000.0, 1.0, "or_greater") var path_cost := 60.0
 ## Radius that clears the corruption, cells beyond the footprint.
 @export_range(0.0, 30.0, 0.5) var clear_radius := 0.0
+## Radius the player may build in, cells beyond the footprint (the relay: 8); 0 = none
+## (docs/concept.md «Склади і радіус будівництва»).
+@export_range(0.0, 40.0, 0.5) var build_radius := 0.0
 ## Slimes can not walk into its cells at all (the wall): SwarmSim.solid. With a path_cost of
 ## FlowField.SOLID or more they also walk round it whenever there is a way round.
 @export var solid := false

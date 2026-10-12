@@ -20,6 +20,12 @@ enum ShadowSource { CODEX, SILHOUETTE }
 @export var map_shift := Vector2(0, 2.4):
 	set(v): map_shift = v; emit_changed()
 
+@export_group("Game")
+## Radius the player may build in, cells beyond the 6×6 footprint (docs/concept.md
+## «Склади і радіус будівництва»).
+@export_range(0.0, 40.0, 0.5) var build_radius := 14.0:
+	set(v): build_radius = v; emit_changed()
+
 @export_group("Cast shadow")
 ## Codex = core_shadow_cast.png as drawn; Silhouette = the building tinted to `shadow_color`.
 @export var source := ShadowSource.CODEX:

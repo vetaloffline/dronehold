@@ -1,15 +1,45 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://game/objects/block/block_building.gd" id="1_block"]
+[ext_resource type="Script" path="res://game/objects/relay/relay.gd" id="1_relay"]
 [ext_resource type="Resource" path="res://game/objects/relay/relay_rig.tres" id="2_rig"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/relay/relay_base.png" id="3_base"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/relay/relay_base_shadow.png" id="4_shadow"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/relay/relay_dish_029_2.png" id="5_dish"]
 
 [node name="Relay" type="Node2D"]
-script = ExtResource("1_block")
+texture_filter = 4
+scale = Vector2(0.084, 0.084)
+script = ExtResource("1_relay")
 rig = ExtResource("2_rig")
 title = "Ретранслятор"
 
+[node name="BaseShadow" type="Sprite2D" parent="."]
+z_index = -1
+position = Vector2(-508, -732)
+texture = ExtResource("4_shadow")
+centered = false
+
+[node name="Base" type="Sprite2D" parent="."]
+position = Vector2(-508, -732)
+texture = ExtResource("3_base")
+centered = false
+
+[node name="DishShadow" type="Sprite2D" parent="."]
+modulate = Color(0, 0, 0, 0.4)
+position = Vector2(-186, -237.5)
+scale = Vector2(1, 0.5)
+texture = ExtResource("5_dish")
+centered = false
+offset = Vector2(-197, -205.5)
+
+[node name="Dish" type="Sprite2D" parent="."]
+position = Vector2(4, -707.5)
+texture = ExtResource("5_dish")
+centered = false
+offset = Vector2(-197, -205.5)
+
 [node name="DronePad1" type="Marker2D" parent="."]
-position = Vector2(-52, 14)
+position = Vector2(-201, -60)
 
 [node name="DronePad2" type="Marker2D" parent="."]
-position = Vector2(52, 14)
+position = Vector2(199, -60)

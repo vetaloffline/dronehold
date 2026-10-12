@@ -4,11 +4,15 @@ extends RefCounted
 ## - A building goes on free buildable cells (GameMap.placement_problem) and not onto a vein's drill
 ##   slot — that one is kept for the drill.
 ## - The drill goes only into the slot of a crystal vein that has no drill yet.
+## - Everything (the drill too) goes only inside the build radius of the core or a relay
+##   (docs/concept.md «Склади і радіус будівництва»): the centre of every footprint cell within
+##   MapObject.build_radius_cells() of a source's footprint centre. Each source counts on its own.
 ## - It costs item.cost from the wallet, taken when the player confirms (✔), not when the ghost appears.
 
 const NO_MONEY := "не вистачає кристалів"
 const NOT_A_SLOT := "бур — тільки в підсвічений слот біля жили"
 const SLOT_KEPT := "тут слот бура"
+const OUT_OF_RADIUS := "поза радіусом будівництва"
 
 
 ## A new object of `item` at `cell`, not in the tree yet. `ghost` = build-mode preview: it is drawn,
@@ -37,6 +41,12 @@ static func free_slots(map: GameMap) -> Array[CrystalVein]:
 	return out
 
 
+## The 2×2 cells of a vein's drill slot.
+static func slot_cells(v: CrystalVein) -> Array[Vector2i]:
+	var s := v.drill_slot_cell()
+	return [s, s + Vector2i(1, 0), s + Vector2i(0, 1), s + Vector2i(1, 1)]
+
+
 ## Map px square of a vein's slot (its 2×2 cells; the drill stands on them).
 static func slot_rect(v: CrystalVein) -> Rect2:
 	return Rect2(Vector2(v.drill_slot_cell()) * MapGrid.CELL, MapGrid.CELL * 2.0)
@@ -51,16 +61,66 @@ static func slot_at(map: GameMap, p: Vector2) -> CrystalVein:
 	return null
 
 
-## Per cell (index r * cols + c), 1 = nothing can be built on it for `item`: terrain that is not
-## buildable, cells taken by objects, and — for anything but the drill — the free drill slots.
-## The build mode paints these red over the whole map.
-static func blocked_cells(map: GameMap, item: BuildItem) -> PackedByteArray:
+## Objects on the map that give a build radius (the core, relays; ghosts are not on the map).
+static func radius_sources(map: GameMap) -> Array[MapObject]:
+	var out: Array[MapObject] = []
+	for o in map.objects():
+		if o.build_radius_cells() > 0.0:
+			out.append(o)
+	return out
+
+
+## Is the centre of cell `c` inside the build radius of one of `sources`?
+static func _cell_in(sources: Array[MapObject], c: Vector2i) -> bool:
+	var p := Vector2(c) + Vector2(0.5, 0.5)
+	for s in sources:
+		var rad := s.build_radius_cells()
+		if p.distance_squared_to(s.build_centre_cells()) <= rad * rad:
+			return true
+	return false
+
+
+## Per cell (index r * cols + c), 1 = inside the build radius of the core or a relay.
+static func radius_cells(map: GameMap) -> PackedByteArray:
 	var g := map.grid
 	var out := PackedByteArray()
 	out.resize(g.cols * g.rows)
+	for s in radius_sources(map):
+		var mid := s.build_centre_cells()
+		var rad := s.build_radius_cells()
+		var r0 := maxi(0, floori(mid.y - rad))
+		var r1 := mini(g.rows - 1, ceili(mid.y + rad))
+		var c0 := maxi(0, floori(mid.x - rad))
+		var c1 := mini(g.cols - 1, ceili(mid.x + rad))
+		for r in range(r0, r1 + 1):
+			for c in range(c0, c1 + 1):
+				if (Vector2(c, r) + Vector2(0.5, 0.5)).distance_squared_to(mid) <= rad * rad:
+					out[r * g.cols + c] = 1
+	return out
+
+
+## Are all `cells` inside the build radius (each one of some source)?
+static func in_radius(map: GameMap, cells: Array[Vector2i]) -> bool:
+	var sources := radius_sources(map)
+	for c in cells:
+		if not _cell_in(sources, c):
+			return false
+	return true
+
+
+## Per cell (index r * cols + c), 1 = nothing can be built on it for `item`: terrain that is not
+## buildable, cells taken by objects, cells outside the build radius (radius_cells) and — for
+## anything but the drill — the free drill slots. The build mode paints these red over the whole map.
+## `near` = radius_cells(map) if the caller has it already.
+static func blocked_cells(map: GameMap, item: BuildItem, near := PackedByteArray()) -> PackedByteArray:
+	var g := map.grid
+	var out := PackedByteArray()
+	out.resize(g.cols * g.rows)
+	if near.size() != out.size():
+		near = radius_cells(map)
 	for r in g.rows:
 		for c in g.cols:
-			if not g.can_build(c, r):
+			if not g.can_build(c, r) or near[r * g.cols + c] == 0:
 				out[r * g.cols + c] = 1
 	for o in map.objects():
 		if not o.occupies_cells() or o.is_in_group("enemy_spawn"):
@@ -95,6 +155,8 @@ static func problem(map: GameMap, item: BuildItem, o: MapObject, wallet: Wallet)
 	var p := map.placement_problem(o)
 	if p != "":
 		return p
+	if not in_radius(map, o.footprint_cells()):
+		return OUT_OF_RADIUS
 	if wallet and not wallet.can_pay(item.cost):
 		return NO_MONEY
 	return ""

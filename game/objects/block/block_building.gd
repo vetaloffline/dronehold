@@ -1,8 +1,8 @@
 @tool
 class_name BlockBuilding
 extends MapObject
-## Placeholder building drawn by code as a block over its footprint (wall, relay — until they get
-## art). It has hit points (`hp`, rig.max_hp): slimes do not bite yet, so for now it only makes
+## Building drawn by code as a block over its footprint (the wall without art); Relay extends it and
+## draws sprites instead. It has hit points (`hp`, rig.max_hp): slimes do not bite yet, so for now it only makes
 ## them walk round (rig.path_cost); at 0 hp it is removed (GameMap notices → map_changed).
 ## A store (rig.store, the relay): joins "storage", drones land on its DronePad* markers.
 ## Node origin = ground point = footprint centre; drawn in map px (scale 1).
@@ -37,6 +37,15 @@ func blocks_walk() -> bool:
 
 func get_clear_radius() -> float:
 	return rig.clear_radius if rig else 0.0
+
+
+func get_build_radius() -> float:
+	return rig.build_radius if rig else 0.0
+
+
+## Drawn from sprites (Relay with art in its rig), not as a block. Override.
+func has_art() -> bool:
+	return false
 
 
 func display_name() -> String:

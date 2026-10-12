@@ -234,12 +234,11 @@ func _update_rot() -> void:
 	clears.resize(MAX_CLEARS)
 	var n := 0
 	for o in objects():
-		var rad := o.get_clear_radius()
-		if rad <= 0.0 or n >= MAX_CLEARS:
+		var r := o.clear_radius_px()
+		if r <= 0.0 or n >= MAX_CLEARS:
 			continue
 		var f := o.get_footprint()
 		var centre := grid.cell_origin(o.cell) + Vector2(f.x * MapGrid.CELL.x, f.y * MapGrid.CELL.y) * 0.5
-		var r := (rad + maxf(f.x, f.y) * 0.5) * MapGrid.CELL.x
 		clears[n] = Vector4(centre.x, centre.y, r, rot_soft * MapGrid.CELL.x)
 		n += 1
 	mat.set_shader_parameter("clears", clears)

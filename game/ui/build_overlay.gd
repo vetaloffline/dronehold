@@ -8,7 +8,10 @@ extends Node2D
 ## - a wall line: its cells (green / red when the money is short), a ring on every tapped point; a
 ##   point the wall can not reach flashes red;
 ## - while the build mode is open (`show_map`): a light grid over the whole visible map and the cells
-##   where nothing can be built tinted red (Builder.blocked_cells), so it is clear where to tap.
+##   where nothing can be built tinted red (Builder.blocked_cells), so it is clear where to tap; the
+##   edge of the build radius (Builder.radius_cells) as a cyan line along the cell edges;
+## - a ghost that gives a build radius (the relay): the radius it will add as a dashed ellipse
+##   (a circle in cells, squashed CELL.y / CELL.x on the screen, like the cleared ground).
 
 const OK_COLOR := Color(0.3, 1.0, 0.45)
 const BAD_COLOR := Color(1.0, 0.3, 0.3)
@@ -18,6 +21,8 @@ const GRID_AROUND := 3
 ## Build mode map layer: grid lines and the tint of cells where nothing can be built.
 const MAP_GRID_COLOR := Color(1, 1, 1, 0.32)
 const MAP_BLOCKED_COLOR := Color(1.0, 0.18, 0.18, 0.34)
+## Edge of the build radius and the relay ghost's ellipse.
+const RADIUS_COLOR := Color(0.35, 0.85, 1.0, 0.95)
 
 ## Footprint cells of the ghost (empty = no ghost) and the map px square to light up (its cells).
 var cells := Rect2i()
@@ -39,6 +44,13 @@ var grid: MapGrid
 var _blocked_tex: ImageTexture
 ## What _blocked_tex shows (Builder.blocked_cells), kept for blocked_shown().
 var _blocked := PackedByteArray()
+## Builder.radius_cells (1 = inside the build radius) and its edge: pairs of map px points, one pair
+## per cell side where the mask changes (draw_multiline).
+var _near := PackedByteArray()
+var _edge := PackedVector2Array()
+## The ghost's future build radius: ellipse centre and radius along x, map px (0 = none).
+var reach_centre := Vector2.ZERO
+var reach_px := 0.0
 var _t := 0.0
 
 
@@ -46,12 +58,15 @@ func _ready() -> void:
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
 
-## Turn the map layer on / off; `blocked` = Builder.blocked_cells() of grid `g`.
-func show_blocked(on: bool, g: MapGrid = null, blocked := PackedByteArray()) -> void:
+## Turn the map layer on / off; `blocked` = Builder.blocked_cells() of grid `g`, `near` =
+## Builder.radius_cells() (empty = no radius edge).
+func show_blocked(on: bool, g: MapGrid = null, blocked := PackedByteArray(), near := PackedByteArray()) -> void:
 	show_map = on
 	if on and g:
 		grid = g
 		_blocked = blocked
+		_near = near
+		_edge = _radius_edge(g, near)
 		var img := Image.create(g.cols, g.rows, false, Image.FORMAT_RGBA8)
 		var clear := Color(0, 0, 0, 0)
 		for r in g.rows:
@@ -64,6 +79,36 @@ func show_blocked(on: bool, g: MapGrid = null, blocked := PackedByteArray()) -> 
 	queue_redraw()
 
 
+## Cell sides where `near` changes (inside one side, outside the other), as draw_multiline pairs.
+## The map border is not an edge.
+static func _radius_edge(g: MapGrid, near: PackedByteArray) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	if near.size() != g.cols * g.rows:
+		return out
+	for r in g.rows:
+		for c in g.cols:
+			var v := near[r * g.cols + c]
+			if c + 1 < g.cols and near[r * g.cols + c + 1] != v:
+				out.append(Vector2(c + 1, r) * MapGrid.CELL)
+				out.append(Vector2(c + 1, r + 1) * MapGrid.CELL)
+			if r + 1 < g.rows and near[(r + 1) * g.cols + c] != v:
+				out.append(Vector2(c, r + 1) * MapGrid.CELL)
+				out.append(Vector2(c + 1, r + 1) * MapGrid.CELL)
+	return out
+
+
+## Is cell (c, r) inside the build radius as shown right now (tests)?
+func inside_shown(c: int, r: int) -> bool:
+	if not show_map or grid == null or not grid.inside(c, r) or _near.size() != grid.cols * grid.rows:
+		return false
+	return _near[r * grid.cols + c] == 1
+
+
+## Cell sides drawn as the build radius edge (tests).
+func edge_count() -> int:
+	return _edge.size() / 2 if show_map else 0
+
+
 ## Is cell (c, r) tinted red right now (tests)?
 func blocked_shown(c: int, r: int) -> bool:
 	if not show_map or grid == null or not grid.inside(c, r):
@@ -74,7 +119,7 @@ func blocked_shown(c: int, r: int) -> bool:
 func _process(dt: float) -> void:
 	_t += dt
 	_bad_t = maxf(0.0, _bad_t - dt)
-	if _bad_t > 0.0 or not line.is_empty() or show_map or cells.size != Vector2i.ZERO or not slots.is_empty():
+	if _bad_t > 0.0 or not line.is_empty() or show_map or cells.size != Vector2i.ZERO or not slots.is_empty() or reach_px > 0.0:
 		queue_redraw()
 
 
@@ -100,11 +145,23 @@ func show_state(footprint: Rect2i, at: Rect2, can: bool, free_slots: Array[Rect2
 	queue_redraw()
 
 
+## The ghost's future build radius around `centre` (map px), `rad` px along x; 0 = hide.
+func show_reach(centre: Vector2, rad: float) -> void:
+	reach_centre = centre
+	reach_px = rad
+	queue_redraw()
+
+
 func _draw() -> void:
 	var k := _screen_k()
 	var pulse := 0.5 + 0.5 * sin(_t * 4.0)
 	if show_map and grid:
 		_draw_map_layer(k)
+		# Over the grid lines: the edge of the build radius.
+		if not _edge.is_empty():
+			draw_multiline(_edge, RADIUS_COLOR, 2.5 * k)
+	if reach_px > 0.0:
+		_draw_reach(k, pulse)
 	_draw_line_plan(k, pulse)
 	for r in slots:
 		draw_rect(r, Color(SLOT_COLOR, 0.22 + 0.16 * pulse))
@@ -167,6 +224,20 @@ func _draw_map_layer(k: float) -> void:
 		draw_line(Vector2(c * MapGrid.CELL.x, view.position.y), Vector2(c * MapGrid.CELL.x, view.end.y), MAP_GRID_COLOR, w)
 	for r in range(r0, r1 + 1):
 		draw_line(Vector2(view.position.x, r * MapGrid.CELL.y), Vector2(view.end.x, r * MapGrid.CELL.y), MAP_GRID_COLOR, w)
+
+
+## The ghost's future build radius: a slowly turning dashed ellipse (selection_highlight.gd draws the
+## cleared ground the same way: a circle squashed CELL.y / CELL.x in y).
+func _draw_reach(k: float, pulse: float) -> void:
+	draw_set_transform(reach_centre, 0.0, Vector2(1.0, MapGrid.CELL.y / MapGrid.CELL.x))
+	var col := Color(RADIUS_COLOR, 0.7 + 0.25 * pulse)
+	var dash := 6.0
+	var a := 0.0
+	while a < 360.0:
+		var a0 := deg_to_rad(a + _t * 4.0)
+		draw_arc(Vector2.ZERO, reach_px, a0, a0 + deg_to_rad(dash), 6, col, 3.0 * k, true)
+		a += dash * 2.0
+	draw_set_transform(Vector2.ZERO)
 
 
 ## The part of the map on screen, in this node's px.

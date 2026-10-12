@@ -1,0 +1,109 @@
+{
+ "canvas": [
+  398,
+  355
+ ],
+ "housing": [
+  197.0,
+  205.5
+ ],
+ "note": "housing = dish hinge = spire top; same px scale as relay_base.png (spire top at 635, 264.5)",
+ "views": [
+  {
+   "file": "relay_dish_006_7.png",
+   "azimuth": 6.7,
+   "measured": 7.0,
+   "source": "relay_dish_15_v1.png"
+  },
+  {
+   "file": "relay_dish_029_2.png",
+   "azimuth": 29.2,
+   "measured": 28.0,
+   "source": "relay_dish_00_v1.png"
+  },
+  {
+   "file": "relay_dish_051_7.png",
+   "azimuth": 51.7,
+   "measured": 56.5,
+   "source": "relay_dish_01_v3.png"
+  },
+  {
+   "file": "relay_dish_074_2.png",
+   "azimuth": 74.2,
+   "measured": 74.0,
+   "source": "relay_dish_02_v3.png"
+  },
+  {
+   "file": "relay_dish_096_7.png",
+   "azimuth": 96.7,
+   "measured": 97.5,
+   "source": "relay_dish_03_v3.png"
+  },
+  {
+   "file": "relay_dish_119_2.png",
+   "azimuth": 119.2,
+   "measured": 119.5,
+   "source": "relay_dish_04_v3.png"
+  },
+  {
+   "file": "relay_dish_141_7.png",
+   "azimuth": 141.7,
+   "measured": 137.0,
+   "source": "relay_dish_05_v3.png"
+  },
+  {
+   "file": "relay_dish_164_2.png",
+   "azimuth": 164.2,
+   "measured": 160.0,
+   "source": "relay_dish_06_v1.png"
+  },
+  {
+   "file": "relay_dish_186_7.png",
+   "azimuth": 186.7,
+   "measured": 180.5,
+   "source": "relay_dish_07_v3.png"
+  },
+  {
+   "file": "relay_dish_209_2.png",
+   "azimuth": 209.2,
+   "measured": 193.0,
+   "source": "relay_dish_08_v1.png"
+  },
+  {
+   "file": "relay_dish_231_7.png",
+   "azimuth": 231.7,
+   "measured": 234.5,
+   "source": "relay_dish_09_v1.png"
+  },
+  {
+   "file": "relay_dish_254_2.png",
+   "azimuth": 254.2,
+   "measured": 254.5,
+   "source": "relay_dish_10_v1.png"
+  },
+  {
+   "file": "relay_dish_276_7.png",
+   "azimuth": 276.7,
+   "measured": 279.0,
+   "source": "relay_dish_11_v1.png"
+  },
+  {
+   "file": "relay_dish_299_2.png",
+   "azimuth": 299.2,
+   "measured": 294.0,
+   "source": "relay_dish_12_v1.png"
+  },
+  {
+   "file": "relay_dish_321_7.png",
+   "azimuth": 321.7,
+   "measured": 308.0,
+   "source": "relay_dish_13_v2.png"
+  },
+  {
+   "file": "relay_dish_344_2.png",
+   "azimuth": 344.2,
+   "measured": 348.5,
+   "source": "relay_dish_14_v1.png"
+  }
+ ]
+}

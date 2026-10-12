@@ -1,6 +1,24 @@
-[gd_resource type="Resource" script_class="BlockRig" format=3]
+[gd_resource type="Resource" script_class="RelayRig" format=3]
 
-[ext_resource type="Script" path="res://game/objects/block/block_rig.gd" id="1_rig"]
+[ext_resource type="Script" path="res://game/objects/relay/relay_rig.gd" id="1_rig"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/relay/relay_base.png" id="2_base"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/relay/relay_base_shadow.png" id="3_shadow"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/relay/relay_dish_006_7.png" id="d00"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/relay/relay_dish_029_2.png" id="d01"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/relay/relay_dish_051_7.png" id="d02"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/relay/relay_dish_074_2.png" id="d03"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/relay/relay_dish_096_7.png" id="d04"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/relay/relay_dish_119_2.png" id="d05"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/relay/relay_dish_141_7.png" id="d06"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/relay/relay_dish_164_2.png" id="d07"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/relay/relay_dish_186_7.png" id="d08"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/relay/relay_dish_209_2.png" id="d09"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/relay/relay_dish_231_7.png" id="d10"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/relay/relay_dish_254_2.png" id="d11"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/relay/relay_dish_276_7.png" id="d12"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/relay/relay_dish_299_2.png" id="d13"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/relay/relay_dish_321_7.png" id="d14"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/relay/relay_dish_344_2.png" id="d15"]
 
 [resource]
 script = ExtResource("1_rig")
@@ -12,4 +30,18 @@ edge_color = Color(0.12, 0.16, 0.22, 1)
 max_hp = 200.0
 path_cost = 8.0
 clear_radius = 4.0
+build_radius = 8.0
 store = true
+base = ExtResource("2_base")
+base_shadow = ExtResource("3_shadow")
+ground = Vector2(508, 732)
+map_scale = 0.084
+dishes = Array[Texture2D]([ExtResource("d00"), ExtResource("d01"), ExtResource("d02"), ExtResource("d03"), ExtResource("d04"), ExtResource("d05"), ExtResource("d06"), ExtResource("d07"), ExtResource("d08"), ExtResource("d09"), ExtResource("d10"), ExtResource("d11"), ExtResource("d12"), ExtResource("d13"), ExtResource("d14"), ExtResource("d15")])
+dish_azimuths = PackedFloat32Array(6.7, 29.2, 51.7, 74.2, 96.7, 119.2, 141.7, 164.2, 186.7, 209.2, 231.7, 254.2, 276.7, 299.2, 321.7, 344.2)
+dish_pivot = Vector2(197, 205.5)
+housing = Vector2(512, 24.5)
+spin_speed = 360.0
+start_angle = 29.2
+dish_shadow_alpha = 0.4
+dish_shadow_offset = Vector2(-190, 470)
+dish_shadow_squash = 0.5
