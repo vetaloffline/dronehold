@@ -7,42 +7,67 @@ disable-model-invocation: true
 
 # /ship — коміт, пуш, PR
 
-Аргументи: `$ARGUMENTS` (може бути порожньо). Тут може бути опис для коміту й PR або вказівкою «почисть драфт».
+Вхід: `$ARGUMENTS` — порожньо, або опис змін (бере участь у назві гілки, заголовку коміту й PR), або
+фраза «почисть драфт» / «clear draft directory» (вмикає крок 6).
 
-Команди `git` і `gh` — кожну окремим викликом, без `cd … &&` і без пайпів після `gh`
-(у sandbox `gh` у пайпі падає на TLS). Мерджити PR — ніколи (хук і deny на `gh pr merge` це й так блокують).
+Правила для всіх кроків:
+- Кожна команда `git` і `gh` — окремим викликом Bash з кореня репо: без `cd … &&`, без `git -C`, без пайпів
+  після `gh`. Інакше команда не потрапляє в `excludedCommands` sandbox і падає на мережі/TLS.
+- Шлях до файлу для `gh` — абсолютний у scratchpad сесії: `gh` працює поза sandbox, де `$TMPDIR` інший.
+- PR не мерджити ніколи.
+- СТОП = вивести причину й вивід команди, що впала, і завершити skill без подальших кроків.
 
-## 1. Що є
+## Крок 1. Зібрати стан
 
-```
-git branch --show-current
-git status --short
-git fetch origin --prune
-```
+Виконати:
+1. `git branch --show-current` → `BRANCH`.
+2. `git status --short` → `DIRTY` = є хоч один рядок.
+3. `git fetch origin --prune`.
+4. Є upstream (`git rev-parse --abbrev-ref @{u}` успішний) → `AHEAD` = `git rev-list --count @{u}..HEAD`;
+   upstream нема → `AHEAD` = `git rev-list --count origin/main..HEAD`.
+5. `BRANCH` ≠ `main` → `gh pr view --json number,state,url` → `PR_STATE` = `OPEN` | `MERGED` | `CLOSED`;
+   помилка «no pull requests found» → `PR_STATE` = `NONE`.
 
-Нові коміти: є upstream — `git rev-list --count @{u}..HEAD`, нема — `git rev-list --count origin/main..HEAD`.
-PR гілки: `gh pr view --json number,state,url` (нема PR — команда падає з «no pull requests found», це нормально).
+## Крок 2. Вибрати шлях
 
-## 2. Чи є що доставляти
+Перевіряти по черзі, спрацьовує перший збіг:
+1. `DIRTY` = ні і `AHEAD` = 0 → вивести «Нічого доставляти — усе вже в PR #N» (`PR_STATE` = `MERGED`/`OPEN`)
+   або «Нічого доставляти — усе вже в main» (`BRANCH` = `main`). СТОП.
+2. `BRANCH` = `main` → крок 3.
+3. `PR_STATE` = `MERGED` або `CLOSED` → крок 3.
+4. Інакше → крок 4.
 
-| Стан | Що робити |
-|---|---|
-| Нема незакомічених змін і нових комітів | Написати «Нічого доставляти — усе вже в PR #N» (або «…вже в main») і **зупинитись**. |
-| Гілка `main` або PR гілки вже `MERGED`, є зміни | **Не питати й не зупинятись** — нова гілка від свіжого main (нижче), далі як завжди. |
-| Інакше (PR `OPEN` або PR нема) | Далі. |
+Не питати людину на цьому кроці.
 
-Нова гілка (незакомічені зміни переїжджають у неї самі):
-- свіжий main: на `main` — `git pull --ff-only`; не на `main` — `git fetch origin main:main`;
-- `git switch -c <тип>/<назва> main`: тип — `feat` | `fix` | `docs` | `art` | `refactor` | `test`, назва — 2–4
-  англійські слова через дефіс за змістом змін (або з `$ARGUMENTS`); зайнята — інша назва.
+## Крок 3. Нова гілка від свіжого main
 
-Упало (локальний main має свої коміти, конфлікт при переносі) — тільки тоді показати помилку й зупинитись.
+Незакомічені зміни переносяться в нову гілку самі. Коміти з `AHEAD` на старій гілці не переносяться — якщо
+`DIRTY` = ні і `AHEAD` > 0 на змердженій гілці: вивести список цих комітів (`git log --oneline origin/main..HEAD`)
+і спитати, чи робити `git cherry-pick` у нову гілку. Відповідь «ні» → СТОП.
 
-## 3. Перевірки
+1. `BRANCH` = `main` → `git pull --ff-only`; інакше → `git fetch origin main:main`. Помилка → СТОП.
+2. Назва: `<тип>/<назва>`. Тип за змінами: код гри (`game/`, `tests/`) → `feat` або `fix` (виправлення
+   помилки); тільки `art/` → `art`; тільки `.md`, `docs/`, `.claude/`, `.agents/` → `docs`. Назва — 2–4
+   англійські слова через дефіс з `$ARGUMENTS`, а якщо він порожній — зі змісту `git status`/`git diff`.
+3. `git rev-parse --verify --quiet refs/heads/<гілка>` успішний або `git ls-remote --heads origin <гілка>`
+   непорожній → додати до назви `-2`, `-3`… до вільної.
+4. `git switch -c <гілка> main`. Помилка (конфлікт переносу змін) → СТОП.
+5. `BRANCH` = нова гілка, `PR_STATE` = `NONE`. → крок 4.
 
-Тільки `.md` і `.claude/` у змінах — тести не ганяти, у звіті так і написати.
+## Крок 4. Визначити, які перевірки потрібні
 
-Інакше — на копії (правило `.claude/rules/editor-and-perf.md`, редактор може бути відкритий):
+`CHANGED` = шляхи з `git status --short` плюс `git diff --name-only origin/main...HEAD`.
+
+- Хоч один шлях у `game/`, `tests/`, `project.godot`, `art/objects/` або з розширенням `.gd`, `.tscn`,
+  `.tres`, `.gdshader`, `.import` → крок 5 (тести гри).
+- Інакше → записати «тести гри не ганяли: змінено тільки <список верхніх папок>» → крок 6.
+
+Окремо: шлях у `.agents/hooks/` → виконати `bash .agents/hooks/test-guard-main.sh`; є рядок `FAIL` або
+exit ≠ 0 → СТОП.
+
+## Крок 5. Тести гри на копії
+
+Тільки на копії (`.claude/rules/editor-and-perf.md`: редактор може бути відкритий).
 
 ```
 rsync -a --delete --exclude .git --exclude .godot --exclude art/drafts --exclude '.env*' ./ $TMPDIR/dh_copy/
@@ -50,52 +75,69 @@ godot --headless --path $TMPDIR/dh_copy --import > $TMPDIR/dh_import.txt 2>&1; e
 for t in run_tests smoke_game smoke_sandbox smoke_menu smoke_turret_360 smoke_map_editor; do godot --headless --path $TMPDIR/dh_copy --script res://tests/$t.gd > $TMPDIR/dh_$t.txt 2>&1; echo "$t exit=$?"; grep -E '^(tests|smoke|menu|sandbox|turret 360|map editor):|SCRIPT ERROR|Parse Error' $TMPDIR/dh_$t.txt | head -5; done
 ```
 
-`smoke_menu` у sandbox падає на «sound button mutes and remembers» (`cannot save user://settings.cfg (error 12)`):
-`user://` — це `~/Library/Application Support/Godot/…`, sandbox туди не пускає. Тоді перезапустити тільки
-його з `dangerouslyDisableSandbox: true`; `$TMPDIR` поза sandbox інший — шлях до копії підставити повний
-(той, що `$TMPDIR/dh_copy` дає в sandbox). Поза sandbox він проходить (перевірено 2026-10-12).
+Тест пройшов, якщо одночасно: exit 0; підсумковий рядок (`tests:`, `smoke:`, `menu:`, `sandbox:`,
+`turret 360:`, `map editor:`) закінчується на `0 failed`; нема `SCRIPT ERROR` і `Parse Error`.
+Скрипт, що не скомпілювався, теж дає exit 0 — тому підсумковий рядок обов'язковий.
 
-Пройшло = кожен exit 0, кожен підсумковий рядок закінчується на `0 failed`, нема `SCRIPT ERROR`/`Parse Error`
-(скрипт, що не скомпілювався, теж дає exit 0). Щось упало — показати вивід і **зупинитись**, нічого не комітити.
+Виняток `smoke_menu`: у його виводі є `cannot save user://settings.cfg` і `FAIL: sound button mutes and remembers`
+→ це sandbox (не пускає в `~/Library/Application Support/Godot`). Виконати `echo $TMPDIR` у sandbox, потім
+перезапустити тільки `smoke_menu` з `dangerouslyDisableSandbox: true` і абсолютним шляхом до копії та виводу.
 
-Зміни в механіці, а `docs/concept.md` не змінено — нагадати (AGENTS.md: нова механіка → оновити concept.md),
-спитати, чи оновлювати, до коміту.
+Будь-який тест не пройшов → СТОП (нічого не комітити).
 
-## 4. Чернетки
+Механіка: зміни в `game/` змінюють ігрове правило (ціни, урон, радіус, швидкість, хвилі, новий об'єкт чи
+поведінка), а `docs/concept.md` не в `CHANGED` → спитати «Оновити docs/concept.md під цю зміну?».
+«Так» → оновити й додати до коміту. «Ні» → крок 6.
 
-У `$ARGUMENTS` є «почисть драфт» або «clear draft directory» — `bash .claude/skills/art/scripts/clean_drafts.sh`.
-Ні — не чіпати; якщо `art/drafts/` не порожня, одним рядком сказати, що там лежить.
+## Крок 6. Чернетки
 
-## 5. Коміт і пуш
+- `$ARGUMENTS` містить «почисть драфт» або «clear draft directory» → `bash .claude/skills/art/scripts/clean_drafts.sh`;
+  exit ≠ 0 → вивести його повідомлення, продовжити (чернетки не блокують доставку).
+- Інакше `art/drafts/` непорожня → записати для звіту список її верхніх папок. Нічого не видаляти.
 
-- `git status --short` ще раз; у коміт — зміни задачі. Не комітити випадкове: логи, `scratch/`,
-  `.claude/.cc-writes`, файли з секретами. Сумнівний файл — спитати.
-- Заголовок коміту англійською, як в історії (`git log --oneline -10`): «Що: коротко про суть».
-  Різні за змістом зміни — окремими комітами.
-- `git push -u origin HEAD`
+→ крок 7.
 
-## 6. PR
+## Крок 7. Коміт і пуш
 
-PR уже `OPEN` — пуш його оновив; дати посилання й закінчити.
+1. `git status --short`. Не додавати: `*.log`, `scratch/`, `.claude/.cc-writes/`, `.env*`, `*.pem`, `*.key`,
+   файли > 10 МБ поза `art/`. Інший незнайомий файл, якого не створювали в цій сесії і не видно з
+   `$ARGUMENTS`, — спитати, чи комітити.
+2. Групи комітів: один коміт на одну зміну за змістом (фіча разом з її тестами й доками — один коміт;
+   незв'язана правка README чи конфігів — окремий).
+3. Заголовок — англійською, у стилі `git log --oneline -10`: `<Що>: <суть>`. Без підпису Claude і
+   `Co-Authored-By`.
+4. `git add <шляхи групи>` → `git commit` — на кожну групу.
+5. `git push -u origin HEAD`. Помилка → СТОП.
 
-PR нема — тіло у `$TMPDIR/pr_body.md` у форматі попередніх PR (наприклад #9):
+`PR_STATE` = `OPEN` → крок 9. `PR_STATE` = `NONE` → крок 8.
+
+## Крок 8. Створити PR
+
+1. Записати тіло інструментом Write у `<scratchpad>/pr_body.md` (абсолютний шлях scratchpad — з опису
+   середовища сесії):
 
 ```
 ## Що зроблено
 
-- **Суть** — пояснення.
+- **<суть>** — <пояснення>.
 
 ## Перевірки (копія репо, Godot 4.7.2)
 
 - `run_tests` — exit 0, N passed, 0 failed
-- smoke-тести — exit 0, 0 failed
-- Що не перевіряли (вікно, телефон) — так і написати.
+- `smoke_*` — exit 0, 0 failed
+- Не перевіряли: <вікно / телефон / що саме>.
 ```
 
-```
-gh pr create --base main --head <гілка> --title "<заголовок англійською>" --body-file $TMPDIR/pr_body.md
-```
+   Крок 5 пропущено → у «Перевірки» написати рядок з кроку 4 замість результатів тестів.
+2. `gh pr create --base main --head <BRANCH> --title "<заголовок англійською>" --body-file <scratchpad>/pr_body.md`
 
-## Звіт
+→ крок 9.
 
-Гілка, коміти (`git log --oneline origin/main..HEAD`), результат тестів з exit-кодами, посилання на PR.
+## Крок 9. Звіт людині
+
+Вивести:
+- гілку і чи вона нова (крок 3);
+- коміти: `git log --oneline origin/main..HEAD`;
+- перевірки: кожен тест з exit-кодом і підсумковим рядком, або рядок «тести гри не ганяли…»;
+- чернетки: що видалено або що лежить;
+- посилання на PR.
