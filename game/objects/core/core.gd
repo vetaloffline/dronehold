@@ -41,6 +41,10 @@ func get_clear_radius() -> float:
 	return 14.0
 
 
+func get_build_radius() -> float:
+	return rig.build_radius if rig else 0.0
+
+
 func get_path_cost() -> float:
 	return 0.0
 

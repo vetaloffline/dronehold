@@ -6,7 +6,8 @@ extends Control
 ##   Turret.update_sprites() places them on the map;
 ## - anything else (show_sprites): a snapshot of the object's own Sprite2D nodes in their current pose
 ##   (shadows skipped), e.g. the drill's body and arm;
-## - a placeholder block (`block` set): drawn like BlockBuilding draws itself on the map;
+## - a placeholder block (`block` set): drawn like BlockBuilding draws itself on the map (a block
+##   building with sprites — the relay — is a snapshot like the drill);
 ## - show_scene(): any building scene (the build menu cards) — one of the above for a fresh instance.
 
 @export var rig: TurretRig:
@@ -62,7 +63,7 @@ func show_scene(scene: PackedScene) -> void:
 		o.free()
 		queue_redraw()
 		return
-	if o is BlockBuilding:
+	if o is BlockBuilding and not (o as BlockBuilding).has_art():
 		rig = null
 		_items.clear()
 		block = (o as BlockBuilding).rig

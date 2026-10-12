@@ -1,9 +1,11 @@
 class_name ObjectInfo
 extends CanvasLayer
-## Tap a turret or a drill → it lights up on the ground (a turret also shows its firing range) and a
-## card docks at the bottom of the screen (concept art/concept/11_turret_info_v1.png, approved
-## 2026-10-09): picture from the real sprites, name, level and up to 4 stat tiles.
+## Tap a turret, a drill or a relay → it lights up on the ground (a turret also shows its firing
+## range, a relay the ground it clears) and a card docks at the bottom of the screen (concept
+## art/concept/11_turret_info_v1.png, approved 2026-10-09): picture from the real sprites (a block
+## building without art — the wall: its block), name, level and up to 4 stat tiles.
 ## Turret: damage / rate / range (+ blast for the grenade launcher). Drill: storage / per cycle / cycle.
+## Relay: hp / cleared radius / drone pads / build radius.
 ## Tap empty ground, ✕ or Esc — the card goes. A drag (camera pan) is not a tap: the pointer must
 ## move less than TAP_SLOP px. While the build mode is open (BuildMenu) taps belong to it.
 
@@ -72,10 +74,15 @@ func screen_to_map(p: Vector2) -> Vector2:
 
 
 static func selectable(o: MapObject) -> bool:
-	return o is Turret or o is Drill
+	return o is Turret or o is Drill or is_relay(o)
 
 
-## The turret / drill under a map point: a footprint-sized box around its ground point (a drill in a
+## A store building of the block kind (the relay; the wall is a block too, but not a store).
+static func is_relay(o: MapObject) -> bool:
+	return o is BlockBuilding and (o as BlockBuilding).rig != null and (o as BlockBuilding).rig.store
+
+
+## The turret / drill / relay under a map point: a footprint-sized box around its ground point (a drill in a
 ## vein slot stands at the slot, not on its cells) plus HIT_UP cells above it; nearest wins.
 func object_at(p: Vector2) -> MapObject:
 	var best: MapObject = null
@@ -100,7 +107,13 @@ func select(o: MapObject) -> void:
 	selected = o
 	if _highlight:
 		_highlight.target = o
-		_highlight.range_px = (o as Turret).get_rig().range_px if o is Turret else 0.0
+		_highlight.clear = is_relay(o)
+		if o is Turret:
+			_highlight.range_px = (o as Turret).get_rig().range_px
+		elif is_relay(o):
+			_highlight.range_px = o.clear_radius_px()
+		else:
+			_highlight.range_px = 0.0
 	if o == null:
 		_hide_card()
 		return
@@ -109,9 +122,20 @@ func select(o: MapObject) -> void:
 		var t := o as Turret
 		_portrait.rig = t.get_rig()
 		_name.text = t.display_name()
+	elif o is BlockBuilding and not (o as BlockBuilding).has_art():
+		var b := o as BlockBuilding
+		_portrait.rig = null
+		_portrait.block = b.rig
+		_name.text = b.display_name()
 	else:
+		# Drill, relay with sprites: a snapshot of its sprites as they are now.
 		_portrait.show_sprites(o)
-		_name.text = "Бур" if o is Drill else String(o.name)
+		if o is Drill:
+			_name.text = "Бур"
+		elif o is BlockBuilding:
+			_name.text = (o as BlockBuilding).display_name()
+		else:
+			_name.text = String(o.name)
 	_refresh()
 	_show_card()
 
@@ -134,6 +158,16 @@ func stats_of(o: MapObject) -> Array:
 			[StatIcon.Kind.CRYSTAL, "%d/%d" % [d.stored, d.rig.storage], "Сховище"],
 			[StatIcon.Kind.CRYSTAL, "+%d" % d.rig.crystals_per_cycle, "За цикл"],
 			[StatIcon.Kind.CLOCK, "%s с" % _num(d.active_rig().cycle_len()), "Цикл"],
+		]
+	if is_relay(o):
+		var b := o as BlockBuilding
+		return [
+			[StatIcon.Kind.HP, "%d/%d" % [ceili(b.hp), int(b.rig.max_hp)], "Міцність"],
+			# Cells from the centre, like the turret's range: the ellipse the selection draws.
+			[StatIcon.Kind.CLEAR, _num(b.clear_radius_px() / MapGrid.CELL.x), "Очищення"],
+			[StatIcon.Kind.PAD, str(b.drone_pads().size()), "Посадка"],
+			# Cells from the centre too: the circle Builder.radius_cells() builds in.
+			[StatIcon.Kind.BUILD, _num(b.build_radius_cells()), "Будівництво"],
 		]
 	return []
 
@@ -170,8 +204,8 @@ static func _num(v: float) -> String:
 func _process(_dt: float) -> void:
 	if selected and not is_instance_valid(selected):
 		select(null)
-	elif selected is Drill:
-		_refresh()  # the storage fills while the card is open
+	elif selected is Drill or is_relay(selected):
+		_refresh()  # the drill's storage fills, the relay's hp drops while the card is open
 
 
 func _show_card() -> void:

@@ -5,9 +5,11 @@ extends CanvasLayer
 ## - the round hammer button (bottom right) opens a strip of cards: picture made from the building's
 ##   own sprites, name, price. Open, the button shows ✕ and closes the mode;
 ## - tap a card — it is active (lifted, gold); tap it again — cancelled;
-## - open, the whole map gets a light grid and the cells where nothing can be built are red;
+## - open, the whole map gets a light grid and the cells where nothing can be built are red; the edge
+##   of the build radius (core, relays: Builder.radius_cells) is a cyan line along the cell edges;
 ## - tap the map — the ghost of the building stands there on its cells (green — can, red — can not);
-##   another tap moves it. The drill only goes into a highlighted free vein slot;
+##   another tap moves it. The drill only goes into a highlighted free vein slot (only the slots inside
+##   the build radius light up). A relay ghost shows the build radius it will add as a dashed ellipse;
 ## - ✔ next to the ghost builds it (takes the price), ✖ removes the ghost. The card stays active;
 ## - the wall (item.line) is painted: press, hold and drag — every cell the finger goes over becomes a
 ##   ghost piece (cells it can not stand on are skipped and flash red; a fast or slanted drag is filled
@@ -369,7 +371,8 @@ func _refresh_map_layer() -> void:
 	if _overlay == null or map == null or map.grid == null:
 		return
 	if is_open:
-		_overlay.show_blocked(true, map.grid, Builder.blocked_cells(map, item))
+		var near := Builder.radius_cells(map)
+		_overlay.show_blocked(true, map.grid, Builder.blocked_cells(map, item, near), near)
 	else:
 		_overlay.show_blocked(false)
 	if ghost:
@@ -595,13 +598,17 @@ func _update_overlay() -> void:
 	var slots: Array[Rect2] = []
 	if item and item.vein_slot_only and map:
 		for v in Builder.free_slots(map):
-			slots.append(Builder.slot_rect(v))
+			if Builder.in_radius(map, Builder.slot_cells(v)):
+				slots.append(Builder.slot_rect(v))
 	var fp := Rect2i()
 	var sq := Rect2()
+	var reach := 0.0
 	if ghost:
 		fp = Rect2i(ghost.cell, ghost.get_footprint())
 		sq = ghost.footprint_rect()
+		reach = ghost.build_radius_cells() * MapGrid.CELL.x
 	_overlay.show_state(fp, sq, place_ok, slots)
+	_overlay.show_reach(ghost.build_centre_cells() * MapGrid.CELL if ghost else Vector2.ZERO, reach)
 	var line: Array[Vector2i] = []
 	if item and item.line:
 		line = line_cells()

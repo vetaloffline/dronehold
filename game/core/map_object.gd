@@ -39,6 +39,37 @@ func get_clear_radius() -> float:
 	return 0.0
 
 
+## Radius of the cleared ellipse as GameMap._update_rot() hands it to rot.gdshader, map px along x
+## (y is squashed by CELL.y / CELL.x): get_clear_radius() + half the footprint's longer side, in cells
+## × CELL.x, around the footprint centre. 0 = clears nothing.
+func clear_radius_px() -> float:
+	var rad := get_clear_radius()
+	if rad <= 0.0:
+		return 0.0
+	var f := get_footprint()
+	return (rad + maxf(f.x, f.y) * 0.5) * MapGrid.CELL.x
+
+
+## Radius (cells, beyond the footprint) the player may build in; 0 = none. Override.
+func get_build_radius() -> float:
+	return 0.0
+
+
+## Build radius from the footprint centre, cells: get_build_radius() + half the footprint's longer
+## side (the same measure as clear_radius_px()). 0 = it gives none. Builder.radius_cells() uses it.
+func build_radius_cells() -> float:
+	var rad := get_build_radius()
+	if rad <= 0.0:
+		return 0.0
+	var f := get_footprint()
+	return rad + maxf(f.x, f.y) * 0.5
+
+
+## Footprint centre in cells (the centre of the build radius circle).
+func build_centre_cells() -> Vector2:
+	return Vector2(cell) + Vector2(get_footprint()) * 0.5
+
+
 ## Extra path cost for enemies to pass through (they chew through buildings); 0 = free. Override.
 func get_path_cost() -> float:
 	return 0.0
