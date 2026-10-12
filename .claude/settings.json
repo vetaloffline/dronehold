@@ -5,7 +5,8 @@
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
-      "Bash(godot:*)"
+      "Bash(godot:*)",
+      "Bash(bash .claude/skills/art/scripts/clean_drafts.sh)"
     ],
     "deny": [
       "Bash(rm -rf *)",
