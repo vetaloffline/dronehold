@@ -1,6 +1,6 @@
 ---
 name: art
-description: Dronehold art pipeline — generating and editing images with Codex ($imagegen) for the game (sprites of buildings, units, enemies, resources, UI elements, screen concepts, map ground, pose templates, sprite sheets), checking a generated image against its template, and moving approved art from art/drafts into art/. Use for ANY work with images in this repo — картинка, зображення, спрайт, арт, концепт, іконка, намалюй, згенеруй, перемалюй, ракурси, вигляд будівлі чи юніта.
+description: Dronehold art pipeline — generate or edit images with Codex ($imagegen) — sprites of buildings, units, enemies, resources, UI, screen concepts, map ground, pose templates, sprite sheets; check a result against its template; move approved art from art/drafts into art/ and hook it into a Godot scene. Use when the user asks to draw, generate, redraw or fix how something looks (картинка, зображення, спрайт, арт, концепт, іконка, намалюй, згенеруй, перемалюй, ракурси, вигляд будівлі чи юніта). Use when a new unit, building or enemy is added and has no sprite in art/objects/. Use when the user approves a draft («апрув», «беру цей», «переноси в гру»). Use before creating or changing any PNG or *_template.py under art/.
 ---
 
 # /art — від задачі до апрувнутого спрайта в грі
