@@ -65,6 +65,14 @@ disable-model-invocation: true
 Окремо: шлях у `.agents/hooks/` → виконати `bash .agents/hooks/test-guard-main.sh`; є рядок `FAIL` або
 exit ≠ 0 → СТОП.
 
+Окремо: шлях у `.claude/skills/` → виконати `claude plugin validate .claude/skills` (у sandbox; блок
+`<sandbox_violations>` про `datadoghq.com` і `api.anthropic.com` — телеметрія, не помилка).
+- exit ≠ 0 або рядок `✘` → СТОП: скіл з такою помилкою вантажиться з порожнім frontmatter (Claude не бачить
+  `description`, губляться `disable-model-invocation` і решта полів).
+- exit 0 і рядки `⚠` → записати попередження для звіту, продовжити.
+- Не ловить (перевірено): невідомі поля, невалідні значення (`disable-model-invocation: maybe`). Ці поля
+  переглянути в diff очима.
+
 ## Крок 5. Тести гри на копії
 
 Тільки на копії (`.claude/rules/editor-and-perf.md`: редактор може бути відкритий).
@@ -91,9 +99,14 @@ for t in run_tests smoke_game smoke_sandbox smoke_menu smoke_turret_360 smoke_ma
 
 ## Крок 6. Чернетки
 
-- `$ARGUMENTS` містить «почисть драфт» або «clear draft directory» → `bash .claude/skills/art/scripts/clean_drafts.sh`;
-  exit ≠ 0 → вивести його повідомлення, продовжити (чернетки не блокують доставку).
-- Інакше `art/drafts/` непорожня → записати для звіту список її верхніх папок. Нічого не видаляти.
+Чернетки цієї сесії — тільки `art/drafts/${CLAUDE_SESSION_ID}/`. Решта `art/drafts/` — інших сесій, що
+працюють паралельно, або старі: їх не видаляти ніколи, ні скриптом, ні іншими командами.
+
+- `$ARGUMENTS` містить «почисть драфт» або «clear draft directory» → `bash .claude/skills/art/scripts/clean_drafts.sh`
+  (видаляє тільки папку цієї сесії, решту перелічує); exit ≠ 0 → вивести його повідомлення, продовжити
+  (чернетки не блокують доставку).
+- Інакше → записати для звіту: чи є `art/drafts/${CLAUDE_SESSION_ID}/`, і окремо верхні папки решти
+  `art/drafts/` як «інші сесії або старі, не чіпав». Нічого не видаляти.
 
 → крок 7.
 
@@ -129,6 +142,7 @@ for t in run_tests smoke_game smoke_sandbox smoke_menu smoke_turret_360 smoke_ma
 ```
 
    Крок 5 пропущено → у «Перевірки» написати рядок з кроку 4 замість результатів тестів.
+   Був `claude plugin validate` або `test-guard-main.sh` → додати в «Перевірки» рядком з результатом.
 2. `gh pr create --base main --head <BRANCH> --title "<заголовок англійською>" --body-file <scratchpad>/pr_body.md`
 
 → крок 9.
@@ -138,6 +152,7 @@ for t in run_tests smoke_game smoke_sandbox smoke_menu smoke_turret_360 smoke_ma
 Вивести:
 - гілку і чи вона нова (крок 3);
 - коміти: `git log --oneline origin/main..HEAD`;
-- перевірки: кожен тест з exit-кодом і підсумковим рядком, або рядок «тести гри не ганяли…»;
-- чернетки: що видалено або що лежить;
+- перевірки: кожен тест з exit-кодом і підсумковим рядком, або рядок «тести гри не ганяли…»; `validate`
+  скілів і `test-guard-main.sh`, якщо були (з попередженнями `⚠`);
+- чернетки: що видалено з папки цієї сесії або що в ній лежить; окремо — папки інших сесій і старі (не чіпав);
 - посилання на PR.
