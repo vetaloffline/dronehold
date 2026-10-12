@@ -34,21 +34,8 @@ tests/                         run_tests.gd (юніт), smoke_game.gd (гра + 
 
 Арт лежить в `art/` і не дублюється: сцени беруть PNG звідти (`res://art/...`).
 
-## Правила
-
-- **Об'єкт = сцена + rig.** Усі налаштування — `@export` у `<назва>_rig.gd`, значення — один спільний
-  `<назва>_rig.tres`. Змінив у Inspector — змінились усі такі об'єкти.
-- **`@tool` скрізь.** Анімація крутиться і в редакторі, тому параметри видно наживо.
-  Вузли, створені кодом, не мають `owner` і не зберігаються у сцену.
-- **Корінь об'єкта = точка на землі** (ключ Y-sort), `scale` кореня = `map_scale` з rig, діти —
-  у пікселях свого PNG (`offset = −точка_на_землі`). Позиція з клітинки — `MapObject.ground_point_for()`
-  (та сама формула, що в `map_03_editor.html drawObj()`).
-- **Порядок шарів** (`z_index`): земля −3, гниль −2, тіні об'єктів і слизнів −1, світ (Y-sort) 0,
-  ефекти пострілів +1…+10, накладка сітки 10.
-- **Ефекти тільки кодом**, працюють у Compatibility: сяйва — радіальна текстура + `BLEND_MODE_ADD`,
-  іскри/гільзи — власні масиви в `_draw()`. Compute-шейдерів нема.
-- Текстури, які сильно зменшуються, — з `mipmaps/generate=true` у `.import` і фільтром
-  `LINEAR_WITH_MIPMAPS`.
+Правила коду об'єктів — у [`.claude/rules/godot-objects.md`](../.claude/rules/godot-objects.md)
+(Claude отримує їх, коли читає або редагує файли в `game/`).
 
 ## Рій — `game/swarm/`
 
@@ -219,6 +206,11 @@ Map03 (GameMap)     layout = map_03_layout.png, grid (MapGrid, збережен�
   ж формулами, що `Turret.update_sprites()`; у решти — знімок її власних `Sprite2D` (без тіней) у
   поточній позі; вписує непрозорі пікселі. Іконки — `StatIcon`, кодом.
   Гранатомет — 4-та плитка «Вибух» (`blast` / ширина клітинки), картка розширюється на одну плитку.
+  Ретранслятор (`ObjectInfo.is_relay`: `BlockBuilding` з `rig.store`) — міцність `hp/max_hp` (живе),
+  «Очищення» = `MapObject.clear_radius_px()` / ширина клітинки, «Посадка» = кількість `DronePad*`;
+  картинка — його блок (`ObjectPortrait.block`); підсвітка — `SelectionHighlight.clear`: еліпс
+  `clear_radius_px()` × `CELL.y / CELL.x` навколо центру клітинок — той самий, що `GameMap._update_rot()`
+  віддає в `rot.gdshader`.
   Квадрат підсвітки — `MapObject.footprint_rect()`: клітинки об'єкта (у бура — клітинки слота, він на них стоїть).
 
 ## Будівництво — `game/ui/build_menu.gd` (вузол `Main/BuildMenu`)
