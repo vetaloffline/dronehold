@@ -33,10 +33,14 @@ def checker(size, cell=16):
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("sprite")
-    ap.add_argument("--out", default=None, help="folder for the preview (default: next to sprite)")
-    ap.add_argument("--margin", type=int, default=4, help="min transparent gap to the frame, px")
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="example:\n  python3 .claude/skills/art/scripts/sprite_check.py "
+               "art/drafts/<session id>/buildings/relay/relay_base_v1.png\n"
+               "  -> prints facts, writes relay_base_v1_check.png next to the sprite; exit 0 = ok, 1 = failed")
+    ap.add_argument("sprite", help="PNG to check (RGBA expected; a white background is reported)")
+    ap.add_argument("--out", default=None, help="folder for <name>_check.png (default: next to the sprite)")
+    ap.add_argument("--margin", type=int, default=4, help="min transparent gap to the frame, px (default: 4)")
     a = ap.parse_args()
 
     im = Image.open(a.sprite)
