@@ -26,6 +26,7 @@ func _init() -> void:
 	_test_wall()
 	_test_wall_line()
 	_test_wall_holds_slimes()
+	_test_light_mg()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	quit(1 if _failed > 0 else 0)
 
@@ -474,7 +475,12 @@ func _test_wall_line() -> void:
 	var steep := Builder.cells_between(Vector2i(5, 1), Vector2i(3, 9))
 	check(steep.size() == 10 and steep.back() == Vector2i(3, 9) and _four_connected(Vector2i(5, 1), steep), "steep slanted stroke: 10 cells, 4-connected")
 	check(Builder.cells_between(Vector2i(4, 4), Vector2i(4, 4)).is_empty(), "same cell: nothing in between")
-	var cost := Builder.line_cost(load("res://game/core/build_catalog.tres").items[3], 7)
+	var wall_item: BuildItem = null
+	for it in (load("res://game/core/build_catalog.tres") as BuildCatalog).items:
+		if it.title == "Стіна":
+			wall_item = it  # by title: a new card in the menu shifts the indices
+	check(wall_item != null, "catalog has «Стіна»")
+	var cost := Builder.line_cost(wall_item, 7) if wall_item else {}
 	check(cost == {"crystal": 70}, "wall price: 10 a piece × 7 = 70 (%s)" % [cost])
 
 
@@ -553,3 +559,38 @@ func _test_wall_holds_slimes() -> void:
 	var c := _wall_run(corner, 40.0)
 	check(c.left == 60 and c.in_wall == 0 and c.max_x < 14 * MapGrid.CELL.x, "walls touching at a corner: nobody slips through (left %d, furthest x %.0f)" % [c.left, c.max_x])
 
+
+
+## Light machine gun (docs/concept.md «Урон», 2026-10-14): weaker and slower than the machine gun, smaller on
+## the map, 16 views with every per-view array full (a short housing / muzzle array makes Turret skip firing).
+func _test_light_mg() -> void:
+	var r := load("res://game/objects/light_mg/light_mg_rig.tres") as LightMachineGunRig
+	var mg := load("res://game/objects/machine_gun/machine_gun_rig.tres") as MachineGunRig
+	check(r != null, "light MG rig loads as LightMachineGunRig")
+	if r == null:
+		return
+	check(is_equal_approx(r.damage, 8.0) and is_equal_approx(r.fire_rate, 8.0) and is_equal_approx(r.range_px, 416.0),
+		"light MG: 8 damage, 8 shots/s, 13 cells (%.0f / %.0f / %.0f px)" % [r.damage, r.fire_rate, r.range_px])
+	check(r.damage * r.fire_rate < mg.damage * mg.fire_rate and r.range_px < mg.range_px,
+		"light MG is weaker and shorter-ranged than the machine gun (%.0f vs %.0f dmg/s)" % [r.damage * r.fire_rate, mg.damage * mg.fire_rate])
+	var n := r.heads.size()
+	check(n == 16 and r.housing.size() == n and r.muzzle.size() == n and r.view_azimuths.size() == n and r.view_offsets.size() == n,
+		"light MG: 16 views, every per-view array has 16 entries")
+	var up := true
+	for i in range(1, r.view_azimuths.size()):
+		up = up and r.view_azimuths[i] > r.view_azimuths[i - 1]
+	check(up, "light MG: measured view azimuths go up")
+	var dead := 0
+	for d in 360:
+		var v := r.nearest_view(float(d))
+		if absf(wrapf(float(d) - r.view_angle(v), -180.0, 180.0)) > r.cone_deg(v):
+			dead += 1
+	check(dead == 0, "light MG: every ground direction is in the barrel cone of its nearest view (%d dead degrees)" % dead)
+	var lw := r.base.get_width() * r.map_scale
+	var mw := mg.base.get_width() * mg.map_scale
+	check(lw < mw, "light MG base is smaller on the map than the machine gun's (%.0f vs %.0f px)" % [lw, mw])
+	var t := (load("res://game/objects/light_mg/light_mg.tscn") as PackedScene).instantiate() as LightMachineGun
+	check(t != null and t.get_footprint() == Vector2i(2, 2) and t.display_name() == "Легкий кулемет",
+		"light MG scene: LightMachineGun, 2×2 cells, name «Легкий кулемет»")
+	if t:
+		t.free()

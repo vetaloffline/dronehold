@@ -1,5 +1,5 @@
 extends SceneTree
-## Turret test range headless: slimes put at «click» points, both turrets kill them, freeze works.
+## Turret test range headless: slimes put at «click» points, every turret kills them, freeze works.
 ##   godot --headless --path . --script res://tests/smoke_sandbox.gd
 ## Exit 0 and «sandbox: 0 failed» = ok.
 
@@ -54,12 +54,19 @@ func _process(_dt: float) -> bool:
 			check(_ring(30, 300.0, 220.0) == 30, "30 more slimes for the launcher")
 		1800:
 			check(_swarm.sim.killed_total > _kills_mg, "grenade launcher kills (%d)" % (_swarm.sim.killed_total - _kills_mg))
+			_kills_mg = _swarm.sim.killed_total
+			_swarm.sim.clear()
+			_sb.call("_put_turret", "Легкий кулемет")
+		1805:
+			check(_ring(30, 330.0, 240.0) == 30, "30 more slimes for the light machine gun (inside its 13 cells)")
+		2700:
+			check(_swarm.sim.killed_total > _kills_mg, "light machine gun kills (%d)" % (_swarm.sim.killed_total - _kills_mg))
 			_swarm.sim.clear()
 			_sb.call("_toggle_freeze")
 			_swarm.spawn_at(Vector2(60, 60))
-		1802:
+		2702:
 			_frozen_pos = _swarm.sim.position_of(_swarm.sim.id_of[0])
-		1900:
+		2800:
 			check(_swarm.sim.count == 0 or _swarm.sim.position_of(_swarm.sim.id_of[0]) == _frozen_pos, "frozen slime does not move")
 			print("sandbox: %d failed" % _failed)
 			quit(1 if _failed > 0 else 0)

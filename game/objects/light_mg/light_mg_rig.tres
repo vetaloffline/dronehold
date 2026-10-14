@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="LightMachineGunRig" load_steps=20 format=3]
+
+[ext_resource type="Script" path="res://game/objects/light_mg/light_mg_rig.gd" id="s_rig"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/light_mg/light_mg_base.png" id="1_base"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/light_mg/light_mg_base_shadow.png" id="2_bsh"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/light_mg/light_mg_head_000.png" id="h00"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/light_mg/light_mg_head_022_5.png" id="h01"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/light_mg/light_mg_head_045.png" id="h02"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/light_mg/light_mg_head_067_5.png" id="h03"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/light_mg/light_mg_head_090.png" id="h04"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/light_mg/light_mg_head_112_5.png" id="h05"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/light_mg/light_mg_head_135.png" id="h06"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/light_mg/light_mg_head_157_5.png" id="h07"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/light_mg/light_mg_head_180.png" id="h08"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/light_mg/light_mg_head_202_5.png" id="h09"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/light_mg/light_mg_head_225.png" id="h10"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/light_mg/light_mg_head_247_5.png" id="h11"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/light_mg/light_mg_head_270.png" id="h12"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/light_mg/light_mg_head_292_5.png" id="h13"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/light_mg/light_mg_head_315.png" id="h14"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/light_mg/light_mg_head_337_5.png" id="h15"]
+
+[resource]
+script = ExtResource("s_rig")
+base = ExtResource("1_base")
+base_shadow = ExtResource("2_bsh")
+heads = Array[Texture2D]([ExtResource("h00"), ExtResource("h01"), ExtResource("h02"), ExtResource("h03"), ExtResource("h04"), ExtResource("h05"), ExtResource("h06"), ExtResource("h07"), ExtResource("h08"), ExtResource("h09"), ExtResource("h10"), ExtResource("h11"), ExtResource("h12"), ExtResource("h13"), ExtResource("h14"), ExtResource("h15")])
+housing = PackedVector2Array(471, 424, 471, 424, 471, 424, 471, 424, 471, 424, 471, 424, 471, 424, 471, 424, 471, 424, 471, 424, 471, 424, 471, 424, 471, 424, 471, 424, 471, 424, 471, 424)
+muzzle = PackedVector2Array(918, 290, 879, 371, 779, 441, 642, 487, 471, 504, 292, 485, 154, 437, 57, 363, 23, 274, 67, 178, 149, 118, 296, 66, 475, 48, 642, 65, 793, 118, 877, 180)
+view_azimuths = PackedFloat32Array(3.5, 24.5, 46.5, 67.5, 90, 113.5, 135, 157.5, 180.5, 205.5, 224, 247, 270.5, 292.5, 316, 335)
+ring = Vector2(277.2, 184.6)
+ring_h = 125.5
+map_scale = 0.222
+tuner_scale = 0.644
+head_scale = 1.0
+lift = 0.0
+view_offsets = PackedVector2Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+rot_speed = 450.0
+range_px = 416.0
+fire_rate = 8.0
+damage = 8.0
+recoil = 4.0
+flash = 45.0
+tracer_width = 1.0

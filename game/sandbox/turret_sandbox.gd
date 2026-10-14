@@ -2,11 +2,12 @@ class_name TurretSandbox
 extends Node2D
 ## Test range: one turret in the centre, slimes where you click.
 ##   left click — one slime · hold right — a stream · middle drag / wheel — camera
-## Buttons: machine gun / grenade launcher, slimes stand / crawl, clear.
+## Buttons: machine gun / light machine gun / grenade launcher, slimes stand / crawl, clear.
 ## Run it with «Run current scene» (the clapper ▶ at the top right of the editor).
 
 const TURRETS := {
 	"Кулемет": "res://game/objects/machine_gun/machine_gun.tscn",
+	"Легкий кулемет": "res://game/objects/light_mg/light_mg.tscn",
 	"Гранатомет": "res://game/objects/grenade_launcher/grenade_launcher.tscn",
 }
 ## Turret the next opened range starts with (set by the menu).
