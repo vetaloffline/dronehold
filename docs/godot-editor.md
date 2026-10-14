@@ -32,7 +32,9 @@ FileSystem → `game/maps/map_03/map_03.tscn` → двічі клік. Видн�
 - **Додати** — перетягни сцену з FileSystem на вузол `World` у дереві:
   `game/objects/core/core.tscn`, `crystal_vein/`, `drill/`, `machine_gun/`, `grenade_launcher/`;
   декор — `game/core/prop.tscn`, потім в Inspector вибери `Kind` (скеля, дерево, кущ).
-  Точку появи ворогів — `game/core/spawn_point.tscn` на вузол `Spawns`.
+  Точку появи ворогів — `game/core/spawn_point.tscn` (слизні, червона) або
+  `game/core/lasher_spawn_point.tscn` (lasher, помаранчева з другою рамкою) на вузол `Spawns`. Кожен рій
+  бере тільки свої точки; тип можна змінити в Inspector → `Enemy`.
 - **Видалити** — `Delete`.
 - **Місце під бур** задає жила: у редакторі біля кожної жили видно обидва можливі слоти 2×2 —
   вибраний (яскрава рамка зі стрілкою до жили; зелена — можна будувати, червона — ні; зникає, коли бур

@@ -1,0 +1,13 @@
+{
+ "frames": 32,
+ "cols": 8,
+ "rows": 4,
+ "frame_w": 320,
+ "frame_h": 247,
+ "pivot": [
+  139.3,
+  177.9
+ ],
+ "period_s": 1.6,
+ "stride_widths": 0.5178
+}

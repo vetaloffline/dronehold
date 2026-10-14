@@ -5,6 +5,8 @@ extends SceneTree
 
 var _main: Node
 var _swarm: Swarm
+var _lasher: LasherSwarm
+var _lasher_dist := 0.0
 var _frame := 0
 var _failed := 0
 var _start_dist := 0.0
@@ -27,6 +29,7 @@ func _initialize() -> void:
 	_main = (load("res://game/main.tscn") as PackedScene).instantiate()
 	root.add_child(_main)
 	_swarm = _main.get_node("Map03/Swarm") as Swarm
+	_lasher = _main.get_node_or_null("Map03/LasherSwarm") as LasherSwarm
 
 
 func check(cond: bool, what: String) -> void:
@@ -675,9 +678,9 @@ func _target() -> Vector2:
 	return map.grid.cell_center(cells[14]) if cells.size() > 14 else Vector2.ZERO
 
 
-func _mean_dist() -> float:
+func _mean_dist(sim: SwarmSim = null) -> float:
 	var t := _target()
-	var s := _swarm.sim
+	var s := sim if sim else _swarm.sim
 	var d := 0.0
 	for i in s.count:
 		d += Vector2(s.px[i], s.py[i]).distance_to(t)
@@ -711,9 +714,32 @@ func _process(_dt: float) -> bool:
 				_swarm.speed_cells = 6.0
 				_swarm.target_count = 50
 				_swarm.spawn_per_sec = 200.0
+				# Lashers: their own crowd, their own spawn points (SpawnPoint.enemy = "lasher").
+				check(_lasher != null and _lasher.sim != null and _lasher.field != null, "lasher swarm is set up")
+				if _lasher:
+					check(map.spawn_points("lasher").size() >= 1, "map has lasher spawn points")
+					check(_lasher._spawn_cells.size() == map.spawn_points("lasher").size(), "every lasher spawn point has a reachable cell nearby")
+					check(_lasher.view.bands > 0 and _lasher.view._body.size() == _lasher.view.bands, "lasher bands built")
+					_lasher.speed_cells = 3.0
+					_lasher.target_count = 3
+					_lasher.spawn_per_sec = 50.0
+			if _frame == 100 and _lasher:
+				_lasher_dist = _mean_dist(_lasher.sim)
 			if _frame == 150:
 				check(_swarm.sim.count == 50, "50 slimes spawned (got %d)" % _swarm.sim.count)
 				_start_dist = _mean_dist()
+				if _lasher:
+					check(_lasher.sim.count == 3, "3 lashers spawned (got %d)" % _lasher.sim.count)
+					var d := _mean_dist(_lasher.sim)
+					check(d < _lasher_dist or _lasher.sim.reached_total > 0, "lashers run to the core: %.0f → %.0f px" % [_lasher_dist, d])
+			if _frame == 160 and _lasher:
+				# A lasher standing by the machine gun: the turret looks in every crowd and kills it.
+				_lasher.frozen = true
+				_lasher.target_count = 4
+				check(_lasher.spawn_at(_turret.position + Vector2(90, 30)), "a lasher spawns next to the turret")
+			if _frame == 300 and _lasher:
+				check(_lasher.sim.killed_total >= 1, "the machine gun killed a lasher (killed %d)" % _lasher.sim.killed_total)
+				_lasher.target_count = 0
 			if _frame > 150:
 				var s := _swarm.sim
 				for i in s.count:

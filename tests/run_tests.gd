@@ -14,6 +14,7 @@ func _init() -> void:
 	_test_swarm_ids_and_bins()
 	_test_swarm_queries()
 	_test_crawl_speed()
+	_test_lasher_run()
 	_test_swarm_reaches_target()
 	_test_crowd_spacing()
 	_test_crowd_gets_through()
@@ -196,6 +197,36 @@ func _test_crawl_speed() -> void:
 	var cells := (s.px[0] - 112.0) / MapGrid.CELL.x
 	var speed := cells / (steps * dt)
 	check(absf(speed - rig.avg_speed()) / rig.avg_speed() < 0.03, "crawl speed %.4f vs avg_speed %.4f" % [speed, rig.avg_speed()])
+
+
+func _test_lasher_run() -> void:
+	# The lasher runs on the same SwarmSim.step() with LasherGait: it must average rig.avg_speed()
+	# cells/s (the frames were drawn for that stride, so feet do not slide), and the frame of a phase
+	# must land on the right atlas cell.
+	var rig := load("res://game/objects/lasher/lasher_rig.tres") as LasherRig
+	check(rig != null and rig.texture != null, "lasher rig has the run atlas")
+	if rig == null or rig.texture == null:
+		return
+	check(rig.texture.get_size() == Vector2(rig.frame_w * rig.cols, rig.frame_h * rig.rows), "atlas is cols × rows frames (%s)" % [rig.texture.get_size()])
+	check(rig.frames <= rig.cols * rig.rows, "all frames fit the atlas grid")
+	var gait := LasherGait.new(rig)
+	check(is_equal_approx(gait.dist_lut[SlimeCrawl.SAMPLES - 1], rig.stride) and is_equal_approx(gait.inch_cycle(), rig.stride), "gait: one cycle = stride")
+	check(rig.frame_of(0.0) == 0 and rig.frame_of(0.999) == rig.frames - 1, "frame_of covers 0 … frames−1")
+	check(rig.frame_uv(9) == Vector2(1.0 / 8.0, 0.25) and rig.frame_uv(31) == Vector2(7.0 / 8.0, 0.75), "frame_uv: 9 → (1/8, 1/4), 31 → (7/8, 3/4)")
+	var g := _small_grid(200, 3, [])
+	var f := FlowField.new()
+	var t: Array[Vector2i] = [Vector2i(199, 1)]
+	f.build(g, t)
+	var s := SwarmSim.new()
+	s.setup(4, g.cols, g.rows)
+	s.spawn(Vector2(112, MapGrid.CELL.y * 1.5), 1.0, 25.0, 0.0, 0.0)
+	s.bin()
+	var dt := 1.0 / 60.0
+	var steps := int(round(rig.period * 10.0 / dt))
+	for k in steps:
+		s.step(dt, f, g, gait, rig.width_px())
+	var speed := (s.px[0] - 112.0) / MapGrid.CELL.x / (steps * dt)
+	check(absf(speed - rig.avg_speed()) / rig.avg_speed() < 0.03, "lasher speed %.4f vs avg_speed %.4f" % [speed, rig.avg_speed()])
 
 
 func _test_swarm_reaches_target() -> void:

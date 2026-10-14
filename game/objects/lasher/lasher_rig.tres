@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="LasherRig" format=3]
+
+[ext_resource type="Script" path="res://game/objects/lasher/lasher_rig.gd" id="1_rig"]
+[ext_resource type="Texture2D" path="res://art/objects/enemies/lasher/lasher_run_atlas.png" id="2_tex"]
+
+[resource]
+script = ExtResource("1_rig")
+texture = ExtResource("2_tex")
+size_cells = 2.4
+shadow_x = 0.1

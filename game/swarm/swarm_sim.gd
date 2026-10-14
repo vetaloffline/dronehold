@@ -327,11 +327,13 @@ func nearest_in_cone(pos: Vector2, max_range: float, dir: Vector2, cos_half: flo
 var solid := PackedByteArray()
 
 
-func step(dt: float, field: FlowField, grid: MapGrid, crawl: SlimeCrawl, width_px: float) -> int:
-	var period := crawl.period
-	var cycle := crawl.inch_cycle()
-	var dist_lut := crawl.dist_lut
-	var slide_dt := crawl.slide * MapGrid.CELL.x * dt
+## `crawl`: SlimeCrawl or LasherGait — read once here: period, inch_cycle(), dist_lut (SlimeCrawl.SAMPLES
+## entries, widths from phase 0), slide (cells/s).
+func step(dt: float, field: FlowField, grid: MapGrid, crawl: RefCounted, width_px: float) -> int:
+	var period: float = crawl.get("period")
+	var cycle: float = crawl.call("inch_cycle")
+	var dist_lut: PackedFloat32Array = crawl.get("dist_lut")
+	var slide_dt: float = crawl.get("slide") * MapGrid.CELL.x * dt
 	# Divide (not multiply by 1/48): 1/48 is inexact and puts slimes on a row edge in the
 	# wrong row compared with MapGrid.cell_at().
 	var cw_px := MapGrid.CELL.x

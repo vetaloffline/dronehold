@@ -19,6 +19,8 @@
 [ext_resource type="PackedScene" path="res://game/core/spawn_point.tscn" id="26_y2lld"]
 [ext_resource type="Script" uid="uid://bqy0ylpnbivcm" path="res://game/core/grid_overlay.gd" id="28_khui3"]
 [ext_resource type="Script" uid="uid://bobswigdkaif0" path="res://game/swarm/swarm.gd" id="29_42h6n"]
+[ext_resource type="PackedScene" path="res://game/core/lasher_spawn_point.tscn" id="40_lspawn"]
+[ext_resource type="Script" path="res://game/swarm/lasher_swarm.gd" id="41_lswarm"]
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_rd8lf"]
 seed = 11
@@ -153,6 +155,10 @@ cell = Vector2i(128, -6)
 position = Vector2(5120, 2136)
 cell = Vector2i(159, 88)
 
+[node name="LasherSpawn_157_46" parent="Spawns" groups=["enemy_spawn"] instance=ExtResource("40_lspawn")]
+position = Vector2(5056, 1128)
+cell = Vector2i(157, 46)
+
 [node name="Overlay" type="Node2D" parent="." unique_id=409469681]
 visible = false
 z_index = 10
@@ -256,4 +262,8 @@ cell = Vector2i(17, 47)
 
 [node name="Swarm" type="Node" parent="." unique_id=1668564555 node_paths=PackedStringArray("map")]
 script = ExtResource("29_42h6n")
+map = NodePath("..")
+
+[node name="LasherSwarm" type="Node" parent="." node_paths=PackedStringArray("map")]
+script = ExtResource("41_lswarm")
 map = NodePath("..")

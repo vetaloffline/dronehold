@@ -128,8 +128,8 @@ func step_fx(dt: float) -> void:
 		var spark_k := clampf(rig.blast / 45.0, 1.0, 3.0)
 		for j in 60:
 			_sparks.append(make_spark(s.to, BLAST_SPARK_SPEED * spark_k * t2l, Color8(255, 170, 60) if _rng.randf() < 0.5 else Color8(255, 90, 40), 0.6))
-		var sim := swarm_sim()
-		if sim:
+		# The blast hits every crowd (slimes and lashers), not only the target's.
+		for sim in swarm_sims():
 			sim.damage_blast(to_map(s.to), rig.blast_core, rig.damage, rig.blast, rig.ring_near, rig.ring_far)
 	_shells = keep
 	var bl := []
