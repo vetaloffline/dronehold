@@ -1,14 +1,14 @@
 ---
 name: ship
 description: Доставити поточну роботу — перевірити тести на копії, закомітити, запушити гілку й створити PR у main (або оновити вже відкритий). Тільки коли людина сама набрала /ship.
-argument-hint: "[що зроблено] [почисть драфт] | --help"
+argument-hint: "[що зроблено] [не чисть драфт] | --help"
 disable-model-invocation: true
 ---
 
 # /ship — коміт, пуш, PR
 
 Вхід: `$ARGUMENTS` — порожньо, або опис змін (бере участь у назві гілки, заголовку коміту й PR), або
-фраза «почисть драфт» / «clear draft directory» (вмикає крок 6).
+фраза «не чисть драфт» / «keep drafts» (вимикає чистку чернеток сесії після пушу, крок 6).
 
 Правила для всіх кроків:
 - Кожна команда `git` і `gh` — окремим викликом Bash з кореня репо: без `cd … &&`, без `git -C`, без пайпів
@@ -22,20 +22,20 @@ disable-model-invocation: true
 `$ARGUMENTS` = `--help` або `-h` → вивести блок нижче дослівно і завершити skill (нічого не перевіряти).
 
 ```
-/ship [опис змін] [почисть драфт]
+/ship [опис змін] [не чисть драфт]
 
 Перевіряє, комітить, пушить гілку й створює PR у main (або оновлює відкритий). PR не мерджить.
+Після успішного пушу видаляє чернетки цієї сесії: art/drafts/<id сесії>/ (чужі й старі не чіпає).
 
   опис змін       вільний текст: з нього назва нової гілки, заголовок коміту й PR;
                   сюди ж — обмеження («коміть тільки свої зміни»)
-  почисть драфт   видалити чернетки цієї сесії: art/drafts/<id сесії>/ (чужі й старі не чіпає);
-                  те саме — «clear draft directory»
+  не чисть драфт  лишити чернетки цієї сесії; те саме — «keep drafts»
   -h, --help      ця довідка
 
 Приклади:
   /ship
   /ship relay build radius
-  /ship турель 360 почисть драфт
+  /ship турель 360 не чисть драфт
 ```
 
 Інакше → крок 1.
@@ -85,8 +85,9 @@ disable-model-invocation: true
   `.tres`, `.gdshader`, `.import` → крок 5 (тести гри).
 - Інакше → записати «тести гри не ганяли: змінено тільки <список верхніх папок>» → крок 6.
 
-Окремо: шлях у `.agents/hooks/` → виконати `bash .agents/hooks/test-guard-main.sh`; є рядок `FAIL` або
-exit ≠ 0 → СТОП.
+Окремо: шлях у `.agents/hooks/` або `.claude/settings.json` → виконати `bash .agents/hooks/test-guard-main.sh`
+і `bash .agents/hooks/test-guard-rm.sh` (другий перевіряє й підключення хука в settings.json); у будь-якому є
+рядок `FAIL` або exit ≠ 0 → СТОП.
 
 Окремо: шлях у `.claude/skills/` → виконати `claude plugin validate .claude/skills` (у sandbox; блок
 `<sandbox_violations>` про `datadoghq.com` і `api.anthropic.com` — телеметрія, не помилка).
@@ -125,11 +126,12 @@ for t in run_tests smoke_game smoke_sandbox smoke_menu smoke_turret_360 smoke_ma
 Чернетки цієї сесії — тільки `art/drafts/${CLAUDE_SESSION_ID}/`. Решта `art/drafts/` — інших сесій, що
 працюють паралельно, або старі: їх не видаляти ніколи, ні скриптом, ні іншими командами.
 
-- `$ARGUMENTS` містить «почисть драфт» або «clear draft directory» → `bash .claude/skills/art/scripts/clean_drafts.sh`
-  (видаляє тільки папку цієї сесії, решту перелічує); exit ≠ 0 → вивести його повідомлення, продовжити
-  (чернетки не блокують доставку).
-- Інакше → записати для звіту: чи є `art/drafts/${CLAUDE_SESSION_ID}/`, і окремо верхні папки решти
-  `art/drafts/` як «інші сесії або старі, не чіпав». Нічого не видаляти.
+- `$ARGUMENTS` містить «не чисть драфт» або «keep drafts» → `CLEAN` = ні.
+- Інакше → `CLEAN` = так (рішення людини 2026-10-14: після доставки чернетки сесії не потрібні — апрувнуте
+  вже перенесено в `art/`; чистити без нагадування).
+
+Тут нічого не видаляти: чистка — у кроці 7 після успішного пушу (впала доставка → чернетки лишаються).
+Записати для звіту верхні папки решти `art/drafts/` як «інші сесії або старі, не чіпав».
 
 → крок 7.
 
@@ -144,6 +146,12 @@ for t in run_tests smoke_game smoke_sandbox smoke_menu smoke_turret_360 smoke_ma
    `Co-Authored-By`.
 4. `git add <шляхи групи>` → `git commit` — на кожну групу.
 5. `git push -u origin HEAD`. Помилка → СТОП.
+6. `CLEAN` = так → `bash .claude/skills/art/scripts/clean_drafts.sh` (видаляє тільки папку цієї сесії, решту
+   перелічує); exit ≠ 0 → вивести його повідомлення, продовжити (чернетки не блокують доставку).
+   `CLEAN` = ні → записати для звіту, що `art/drafts/${CLAUDE_SESSION_ID}/` лишено на прохання.
+7. Чужі чернетки (рядки «лишились» з виводу `clean_drafts.sh`, або `ls art/drafts` при `CLEAN` = ні, без папки
+   цієї сесії) — самому не видаляти ніколи, тільки спитати → крок «Чужі чернетки» в
+   `.claude/skills/art/SKILL.md` (питання з галочками). Нема чужих → далі.
 
 `PR_STATE` = `OPEN` → крок 9. `PR_STATE` = `NONE` → крок 8.
 
@@ -165,7 +173,7 @@ for t in run_tests smoke_game smoke_sandbox smoke_menu smoke_turret_360 smoke_ma
 ```
 
    Крок 5 пропущено → у «Перевірки» написати рядок з кроку 4 замість результатів тестів.
-   Був `claude plugin validate` або `test-guard-main.sh` → додати в «Перевірки» рядком з результатом.
+   Був `claude plugin validate`, `test-guard-main.sh` чи `test-guard-rm.sh` → додати в «Перевірки» рядком з результатом.
 2. `gh pr create --base main --head <BRANCH> --title "<заголовок англійською>" --body-file <scratchpad>/pr_body.md`
 
 → крок 9.
@@ -180,7 +188,7 @@ for t in run_tests smoke_game smoke_sandbox smoke_menu smoke_turret_360 smoke_ma
 - [x] Коміти: <git log --oneline origin/main..HEAD>
 - [x] Тести гри: <кожен тест: exit, підсумковий рядок>  |  [–] змінено тільки <папки>
 - [x] validate скілів: <✔ / ⚠ попередження>  |  [–] .claude/skills/ не змінювали
-- [x] test-guard-main.sh: <результат>  |  [–] .agents/hooks/ не змінювали
+- [x] test-guard-main.sh, test-guard-rm.sh: <результат кожного>  |  [–] .agents/hooks/ і settings.json не змінювали
 - [x] Чернетки цієї сесії: <видалено / лежать: …>; інші сесії й старі (не чіпав): <папки>
 - [x] Пуш: origin/<BRANCH>
 - [x] PR: <посилання> (створено / оновлено)

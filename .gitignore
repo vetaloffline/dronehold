@@ -15,3 +15,6 @@
 
 # AI art drafts (reviewed sprites get moved out)
 /art/drafts/
+
+# Python bytecode (хуки, скрипти арту)
+__pycache__/
