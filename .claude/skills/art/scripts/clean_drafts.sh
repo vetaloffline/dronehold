@@ -8,8 +8,23 @@
 # правило Bash матчить текст команди, тому allow на цей скрипт не відкриває інших `rm -rf`.
 set -euo pipefail
 
+if [ $# -eq 1 ] && { [ "$1" = "--help" ] || [ "$1" = "-h" ]; }; then
+  cat <<'EOF'
+usage: bash .claude/skills/art/scripts/clean_drafts.sh
+
+Видаляє чернетки поточної сесії Claude Code: тільки art/drafts/<id сесії>/.
+Папки інших сесій і старі чернетки (art/drafts/<тип>/…) не чіпає, тільки перелічує.
+
+Параметрів нема. Id сесії скрипт бере сам з $CLAUDE_CODE_SESSION_ID (UUID).
+
+exit 0  видалено або видаляти нічого
+exit 2  нема id сесії, папка не звичайна, art/drafts не в .gitignore або під git,
+        переданий аргумент — нічого не видалено
+EOF
+  exit 0
+fi
 if [ $# -ne 0 ]; then
-  echo "clean_drafts: аргументи не приймаються" >&2
+  echo "clean_drafts: аргументи не приймаються (довідка: --help)" >&2
   exit 2
 fi
 

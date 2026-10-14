@@ -64,10 +64,15 @@ def aligned_iou(tm, rm, ts, rs):
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("template")
-    ap.add_argument("result")
-    ap.add_argument("--out", default=None)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="example:\n  python3 .claude/skills/art/scripts/template_compare.py "
+               "art/drafts/<session id>/units/drone/drone_template.png "
+               "art/drafts/<session id>/units/drone/drone_views_v1.png\n"
+               "  -> prints both silhouettes' numbers and IoU, writes drone_views_v1_vs_template.png")
+    ap.add_argument("template", help="pose template PNG the result was generated from (Image 1 given to Codex)")
+    ap.add_argument("result", help="generated PNG to measure")
+    ap.add_argument("--out", default=None, help="folder for <result>_vs_template.png (default: next to the result)")
     a = ap.parse_args()
 
     _, tm = silhouette(a.template)
