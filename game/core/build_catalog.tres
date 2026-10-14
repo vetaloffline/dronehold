@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://game/objects/grenade_launcher/grenade_launcher.tscn" id="5_gl"]
 [ext_resource type="PackedScene" path="res://game/objects/wall/wall.tscn" id="6_wall"]
 [ext_resource type="PackedScene" path="res://game/objects/relay/relay.tscn" id="7_relay"]
+[ext_resource type="PackedScene" path="res://game/objects/light_mg/light_mg.tscn" id="8_lmg"]
 
 [sub_resource type="Resource" id="Item_drill"]
 script = ExtResource("2_item")
@@ -20,6 +21,12 @@ script = ExtResource("2_item")
 title = "Кулемет"
 scene = ExtResource("4_mg")
 cost = {"crystal": 50}
+
+[sub_resource type="Resource" id="Item_lmg"]
+script = ExtResource("2_item")
+title = "Легкий кулемет"
+scene = ExtResource("8_lmg")
+cost = {"crystal": 35}
 
 [sub_resource type="Resource" id="Item_gl"]
 script = ExtResource("2_item")
@@ -42,4 +49,4 @@ cost = {"crystal": 80}
 
 [resource]
 script = ExtResource("1_cat")
-items = Array[ExtResource("2_item")]([SubResource("Item_drill"), SubResource("Item_mg"), SubResource("Item_gl"), SubResource("Item_wall"), SubResource("Item_relay")])
+items = Array[ExtResource("2_item")]([SubResource("Item_drill"), SubResource("Item_mg"), SubResource("Item_lmg"), SubResource("Item_gl"), SubResource("Item_wall"), SubResource("Item_relay")])

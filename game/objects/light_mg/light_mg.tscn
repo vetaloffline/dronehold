@@ -1,0 +1,54 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://game/objects/light_mg/light_mg.gd" id="1_lmg"]
+[ext_resource type="Resource" path="res://game/objects/light_mg/light_mg_rig.tres" id="2_rig"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/light_mg/light_mg_base_shadow.png" id="3_bsh"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/light_mg/light_mg_base.png" id="4_base"]
+[ext_resource type="Texture2D" path="res://art/objects/buildings/light_mg/light_mg_head_090.png" id="5_head"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_add"]
+blend_mode = 1
+
+[node name="LightMachineGun" type="Node2D"]
+texture_filter = 4
+position = Vector2(32, 24)
+scale = Vector2(0.222, 0.222)
+script = ExtResource("1_lmg")
+rig = ExtResource("2_rig")
+
+[node name="BaseShadow" type="Sprite2D" parent="."]
+position = Vector2(-277.2, -310.1)
+texture = ExtResource("3_bsh")
+centered = false
+
+[node name="HeadShadow0" type="Sprite2D" parent="."]
+modulate = Color(0, 0, 0, 0.35)
+texture = ExtResource("5_head")
+centered = false
+offset = Vector2(-471, -424)
+
+[node name="HeadShadow1" type="Sprite2D" parent="."]
+visible = false
+centered = false
+
+[node name="Base" type="Sprite2D" parent="."]
+position = Vector2(-277.2, -310.1)
+texture = ExtResource("4_base")
+centered = false
+
+[node name="Head0" type="Sprite2D" parent="."]
+position = Vector2(0, -125.5)
+texture = ExtResource("5_head")
+centered = false
+offset = Vector2(-471, -424)
+
+[node name="Head1" type="Sprite2D" parent="."]
+visible = false
+centered = false
+
+[node name="Fx" type="Node2D" parent="."]
+z_index = 10
+material = SubResource("CanvasItemMaterial_add")
+
+[node name="FxTop" type="Node2D" parent="."]
+z_index = 10

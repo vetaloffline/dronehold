@@ -302,12 +302,22 @@ func _item(cat: BuildCatalog, title: String) -> BuildItem:
 	return null
 
 
+## Build menu card of the catalog item `title` (card i = catalog.items[i]); by title, so a new card does not
+## shift the tests.
+func _card(bm: Node, title: String) -> Button:
+	var items: Array = bm.catalog.items
+	for i in items.size():
+		if items[i].title == title:
+			return bm.get_node("Root/Cards/Card%d" % i) as Button
+	return null
+
+
 func _test_builder(map: GameMap) -> void:
 	var cat := load("res://game/core/build_catalog.tres") as BuildCatalog
 	var names := []
 	for it in cat.items:
 		names.append("%s %d" % [it.title, it.cost.get("crystal", 0)])
-	check(names == ["Бур 100", "Кулемет 50", "Гранатомет 120", "Стіна 10", "Ретранслятор 80"], "build menu: 5 items with prices (%s)" % [names])
+	check(names == ["Бур 100", "Кулемет 50", "Легкий кулемет 35", "Гранатомет 120", "Стіна 10", "Ретранслятор 80"], "build menu: 6 items with prices (%s)" % [names])
 	var drill_i := _item(cat, "Бур")
 	var mg_i := _item(cat, "Кулемет")
 	var wall_i := _item(cat, "Стіна")
@@ -478,10 +488,11 @@ func _test_build_menu(map: GameMap) -> void:
 	check(out_c.x >= 0 and ov0.blocked_shown(out_c.x, out_c.y), "free ground past the build radius is red (%s)" % out_c)
 	check(ov0.inside_shown(free0.x, free0.y) and ov0.edge_count() > 0, "free ground near the core is inside the radius; the edge is drawn (%d cell sides)" % ov0.edge_count())
 	var pics := []
-	for i in 5:
+	for i in bm.catalog.items.size():
 		var p := bm.get_node("Root/Cards/Card%d/Picture" % i) as ObjectPortrait
 		pics.append(p.rig != null or p.block != null or not p._items.is_empty())
-	check(pics == [true, true, true, true, true], "every card has a picture from the building's own sprites (%s)" % [pics])
+	check(pics.size() == 6 and not pics.has(false), "every card has a picture from the building's own sprites (%s)" % [pics])
+	check((_card(bm, "Легкий кулемет").get_node("Picture") as ObjectPortrait).rig == (load("res://game/objects/light_mg/light_mg_rig.tres") as TurretRig), "light machine gun card: the in-game light machine gun sprites")
 	check((bm.get_node("Root/Cards/Card1/Picture") as ObjectPortrait).rig == (load("res://game/objects/machine_gun/machine_gun_rig.tres") as TurretRig), "machine gun card: the in-game machine gun sprites")
 	var mg := bm.get_node("Root/Cards/Card1") as Button
 	mg.pressed.emit()
@@ -513,7 +524,7 @@ func _test_build_menu(map: GameMap) -> void:
 	(bm.get_node("Root/Confirm/Cancel") as Button).pressed.emit()
 	check(bm.ghost == null, "✖ removes the ghost")
 	# Wall: painted by dragging, built all at once.
-	var wall_card := bm.get_node("Root/Cards/Card3") as Button
+	var wall_card := _card(bm, "Стіна")
 	var cam := _main.get_node("Camera") as MapCamera
 	var cam_pos := cam.position
 	wall_card.pressed.emit()
@@ -603,7 +614,7 @@ func _test_build_menu(map: GameMap) -> void:
 	drill_card_restore_cam(bm, cam)
 	# The relay ghost shows the build radius it adds: a dashed ellipse around its footprint centre.
 	check(bm.ghost == null and ov.reach_px == 0.0, "no ghost: no radius ellipse")
-	var relay_card := bm.get_node("Root/Cards/Card4") as Button
+	var relay_card := _card(bm, "Ретранслятор")
 	relay_card.pressed.emit()
 	var rcell := _free_cell(map, bm.item)
 	bm.place_at((Vector2(rcell) + Vector2(1, 1)) * MapGrid.CELL)
