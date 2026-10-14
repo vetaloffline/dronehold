@@ -28,7 +28,7 @@ paths:
 |---|---|---|
 | −3 | земля | `game/maps/map_03/map_03.tscn` |
 | −2 | гниль (фіолетова земля) | `map_03.tscn` |
-| −1 | тіні об'єктів і слизнів | `map_03.tscn`, `drill.tscn`, `relay.tscn`, `crystal_vein.tscn` |
+| −1 | тіні об'єктів, слизнів і lasher | `map_03.tscn`, `drill.tscn`, `relay.tscn`, `crystal_vein.tscn` |
 | 0 | світ (Y-sort) | — |
 | +1…+10 | ефекти пострілів і бура | `drill.gd` (`_fx`), `machine_gun.tscn`, `grenade_launcher.tscn` |
 | 10 | накладка сітки, примарки будівництва | `map_03.tscn`, `game/ui/build_menu.gd` |

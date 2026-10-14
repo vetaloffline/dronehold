@@ -17,7 +17,7 @@ game/
     map_grid.gd                MapGrid: клітинки 32×24, тип клітинки (земля / прохід / скеля / плато)
     game_map.gd                GameMap: корінь сцени карти (сітка, об'єкти, гниль, поле стрілок)
     map_object.gd              MapObject: база всього на сітці (cell, footprint, прилипання)
-    prop.gd / spawn_point.gd   декор, точка появи ворогів
+    prop.gd / spawn_point.gd   декор, точка появи ворогів (`enemy`: slime / lasher; lasher_spawn_point.tscn)
     grid_overlay.gd            сітка і зелені/червоні рамки об'єктів у редакторі
     rot.gdshader               гниль
     map_camera.gd              камера: палець / мишка, щипок / колесо
@@ -46,8 +46,11 @@ tests/                         run_tests.gd (юніт), smoke_game.gd (гра + 
 |---|---|
 | `swarm_sim.gd` | `SwarmSim`: позиції, фаза, швидкість, hp, напрям, зерно; стабільні id (турель тримає id, слоти переставляються при смерті). Кожен тік: крок + розкладка по клітинках (counting sort) |
 | `flow_field.gd` | `FlowField`: Dijkstra від клітинок ядра по всій карті → стрілка на клітинку. Будівлі — «дорогі» клітинки (гризуть, якщо обхід довший), скелі — непрохідні. Перераховується тільки при зміні карти |
-| `swarm_view.gd` | `SwarmView`: `MultiMeshInstance2D` на кожну смугу 24 px (пів рядка) у Y-sort світі; невидимі смуги не заповнюються і не малюються |
+| `swarm_view.gd` | `SwarmView`: `MultiMeshInstance2D` на кожну смугу 24 px (один рядок) у Y-sort світі; невидимі смуги не заповнюються і не малюються. Два режими: слизень (`setup`/`update`) і кадри (`setup_frames`/`update_frames`, lasher) |
 | `swarm.gd` | `Swarm`: нода в групі `"swarm"`, параметри в Inspector, спавн, заміри |
+| `lasher_swarm.gd` | `LasherSwarm`: другий рій на карті — свій `SwarmSim` (ті самі масиви й `step()`), точки `spawn_points("lasher")`, теж у групі `"swarm"` |
+| `objects/lasher/lasher_gait.gd` | біг для `step()`: відстань росте рівно з фазою, `stride` ширин кадру на цикл |
+| `objects/lasher/lasher.gdshader` | кадр атласу: `UV += INSTANCE_CUSTOM.zw` |
 | `objects/slime/slime_crawl.gd` | цикл повзання, порахований один раз у таблицю (256 точок) |
 | `objects/slime/slime.gdshader` | спрайт + повіки й моргання на відеокарті |
 
@@ -56,6 +59,15 @@ tests/                         run_tests.gd (юніт), smoke_game.gd (гра + 
 у MultiMesh це `INSTANCE_CUSTOM.y` (зсув UV на кадр), тож натовп з різними скінами — так само одна
 команда на смугу і правильний Y-sort. Очі в rig — по 3 на скін, у пікселях кадру; новий скін:
 додати PNG у `slime_skins.py`, заміряти очі, `skin_count` + 3 очі в `slime_rig.tres`.
+
+**Lasher:** атлас `art/objects/enemies/lasher/lasher_run_atlas.png` (8×4 кадри 320×247, будує
+`lasher_run_build.py --atlas`; точка опори, цикл і крок — у `lasher_run_atlas.json` → `lasher_rig.tres`).
+`SwarmSim.step(dt, field, grid, crawl, width_px)` приймає `SlimeCrawl` або `LasherGait` (читає один раз
+`period`, `inch_cycle()`, `dist_lut`, `slide`), тож гарячий цикл спільний. Кадр = `phase × frames`,
+швидкість = `speed_cells / rig.avg_speed()`, тож кадри й пройдена відстань збігаються (тест
+`_test_lasher_run`). У буфері: `custom = (seed, 0, u, v)` — зсув UV на кадр. Турель шукає ціль в усіх
+нодах групи `"swarm"` (найближчу), куля пам'ятає рій цілі, вибух гранати б'є по всіх роях. Смуги двох
+роїв в одному рядку сортуються між собою за порядком дітей, не за y (усередині рою — за y).
 
 **Рух за тік** (на слизня — кілька звернень до масивів): стрілка своєї клітинки × крок «гусені» з
 таблиці + «тиск» і «пружина». У слизня є фізичне тіло `body` = 0,8 ширини картинки: сусіди

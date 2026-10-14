@@ -22,7 +22,8 @@ var _target_id := -1
 ## Snap mode: the view whose barrel cone holds the target (−1 = none / editor demo).
 var _aim_view := -1
 var _rescan := 0.0
-var _swarm: Node
+## The crowd `_target_id` belongs to (a map has several: slimes, lashers — group "swarm").
+var _target_sim: SwarmSim
 var _rng := RandomNumberGenerator.new()
 static var _glow_tex: Texture2D
 
@@ -136,31 +137,47 @@ func find_target(dt: float) -> Variant:
 		var a := _time * r.demo_speed
 		var m := r.demo_center + Vector2(cos(a) * r.demo_radius.x, sin(a) * r.demo_radius.y)
 		return m * r.map_to_local()
-	if _swarm == null or not is_instance_valid(_swarm):
-		_swarm = get_tree().get_first_node_in_group("swarm")
-		if _swarm == null:
-			return null
-	var sim: SwarmSim = _swarm.get("sim")
-	if sim == null:
+	var sims := swarm_sims()
+	if sims.is_empty():
 		return null
 	_rescan -= dt
-	var keep := sim.alive(_target_id) and sim.position_of(_target_id).distance_to(position) <= r.range_px
+	var sim := _target_sim
+	var keep := sim != null and sims.has(sim) and sim.alive(_target_id) and sim.position_of(_target_id).distance_to(position) <= r.range_px
 	if keep and view_mode() == 0:
 		keep = _aim_view >= 0 and in_barrel_cone((sim.position_of(_target_id) - position) * r.map_to_local(), _aim_view)
 	if not keep:
 		_target_id = -1
+		_target_sim = null
 		_aim_view = -1
 		if _rescan <= 0.0:
 			_rescan = RESCAN_S
-			_target_id = _cone_target(sim) if view_mode() == 0 else sim.nearest(position, r.range_px)
+			if view_mode() == 0:
+				_cone_target(sims)
+			else:
+				_nearest_target(sims)
 	if _target_id < 0:
 		return null
-	return (sim.position_of(_target_id) - position) * r.map_to_local()
+	return (_target_sim.position_of(_target_id) - position) * r.map_to_local()
 
 
-## Snap mode: views ordered from the one shown now outwards; the first view with a slime inside
-## its barrel cone gives the target. Bullets then leave along the drawn barrel (≤ barrel_cone off).
-func _cone_target(sim: SwarmSim) -> int:
+## Free mode: the nearest enemy of any crowd. Sets `_target_id` / `_target_sim`.
+func _nearest_target(sims: Array[SwarmSim]) -> void:
+	var r := get_rig()
+	var best_d := INF
+	for sim in sims:
+		var id := sim.nearest(position, r.range_px)
+		if id >= 0:
+			var d := sim.position_of(id).distance_squared_to(position)
+			if d < best_d:
+				best_d = d
+				_target_id = id
+				_target_sim = sim
+
+
+## Snap mode: views ordered from the one shown now outwards; the first view with an enemy (of any
+## crowd; the nearest of them) inside its barrel cone gives the target. Bullets then leave along the
+## drawn barrel (≤ barrel_cone off). Sets `_target_id` / `_target_sim` / `_aim_view`.
+func _cone_target(sims: Array[SwarmSim]) -> void:
 	var r := get_rig()
 	var now: int = pick_views(0)[0][0]
 	var n := r.view_count()
@@ -170,11 +187,18 @@ func _cone_target(sim: SwarmSim) -> int:
 		var v := posmod(now + step, n)
 		# Cone on the ground around the view's azimuth, from the turret's ground point.
 		var az := deg_to_rad(r.view_angle(v))
-		var id := sim.nearest_in_cone(position, r.range_px, Vector2(cos(az), sin(az)), cos(deg_to_rad(r.cone_deg(v))), r.cam_k)
-		if id >= 0:
+		var best_d := INF
+		for sim in sims:
+			var id := sim.nearest_in_cone(position, r.range_px, Vector2(cos(az), sin(az)), cos(deg_to_rad(r.cone_deg(v))), r.cam_k)
+			if id >= 0:
+				var d := sim.position_of(id).distance_squared_to(position)
+				if d < best_d:
+					best_d = d
+					_target_id = id
+					_target_sim = sim
+		if _target_id >= 0:
 			_aim_view = v
-			return id
-	return -1
+			return
 
 
 ## Drawn barrel direction of view `v` on screen: housing → muzzle of its picture.
@@ -201,10 +225,23 @@ func in_barrel_cone(target: Vector2, v := -1) -> bool:
 	return absf(wrapf(az - r.view_angle(v), -180.0, 180.0)) <= r.cone_deg(v)
 
 
+## The crowd of the current target (null without a target / in the editor).
 func swarm_sim() -> SwarmSim:
-	if Engine.is_editor_hint() or _swarm == null or not is_instance_valid(_swarm):
+	if Engine.is_editor_hint():
 		return null
-	return _swarm.get("sim")
+	return _target_sim
+
+
+## Every crowd on the map (nodes of group "swarm" with a `sim`: Swarm, LasherSwarm).
+func swarm_sims() -> Array[SwarmSim]:
+	var out: Array[SwarmSim] = []
+	if Engine.is_editor_hint() or not is_inside_tree():
+		return out
+	for n in get_tree().get_nodes_in_group("swarm"):
+		var s: Variant = n.get("sim")
+		if s is SwarmSim:
+			out.append(s)
+	return out
 
 
 ## Local px → map px.

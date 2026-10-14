@@ -112,15 +112,21 @@ func _rebuild_field() -> void:
 		field = map.build_flow_field()
 		if sim:
 			sim.solid = map.walk_blocked()
-		_spawn_cells.clear()
-		for p in map.spawn_points():
-			var c := _nearest_reachable(map.grid.cell_at(p), 8)
-			if c.x >= 0:
-				_spawn_cells.append(c)
+		_spawn_cells = spawn_cells(map, field, "slime")
+
+
+## Reachable cells of the map's spawn points for `enemy` (SpawnPoint.enemy). Shared with LasherSwarm.
+static func spawn_cells(m: GameMap, f: FlowField, enemy: String) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for p in m.spawn_points(enemy):
+		var c := nearest_reachable(f, m.grid.cell_at(p), 8)
+		if c.x >= 0:
+			out.append(c)
+	return out
 
 
 ## Spawn points may stand on a cliff (the map editor allows it): use the nearest reachable cell.
-func _nearest_reachable(c: Vector2i, max_ring: int) -> Vector2i:
+static func nearest_reachable(field: FlowField, c: Vector2i, max_ring: int) -> Vector2i:
 	var best := Vector2i(-1, -1)
 	var best_d := INF
 	for ring in max_ring + 1:
@@ -179,9 +185,14 @@ func _process(dt: float) -> void:
 
 
 func _view_rect() -> Rect2:
+	return visible_map_rect(self, map)
+
+
+## Map px seen by the camera (the whole map in the editor). Shared with LasherSwarm.
+static func visible_map_rect(node: Node, m: GameMap) -> Rect2:
 	if Engine.is_editor_hint():
-		return Rect2(Vector2.ZERO, map.grid.size_px())
-	var vp := get_viewport()
+		return Rect2(Vector2.ZERO, m.grid.size_px())
+	var vp := node.get_viewport()
 	var inv := vp.get_canvas_transform().affine_inverse()
 	var r := vp.get_visible_rect()
 	return Rect2(inv * r.position, inv.basis_xform(r.size))

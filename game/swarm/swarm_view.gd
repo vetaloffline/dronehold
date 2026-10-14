@@ -10,6 +10,10 @@ extends RefCounted
 ##   [x.x, y.x, 0, origin.x,  x.y, y.y, 0, origin.y,  custom.r, .g, .b, .a]
 ## Transform = Godot Transform2D(scale (sx·face, sy), skew) as in slime_crawl.html:
 ##   x = (sx, 0), y = (−sin(skew)·sy, cos(skew)·sy).
+## Two modes, same bands and buffer:
+##   slime  — setup() / update(): crawl stretch + lean from SlimeCrawl, custom = (seed, skin UV x, 0, 0);
+##   frames — setup_frames() / update_frames(): a run-cycle atlas (LasherRig), no stretch,
+##            custom = (seed, 0, frame UV x, frame UV y); frame = phase × frames.
 
 const STRIDE := 12
 const SUB_BUCKETS := 6
@@ -29,24 +33,37 @@ var _map_w := 0.0
 
 
 func setup(world: Node2D, shadows: Node2D, grid: MapGrid, rig: SlimeRig, shader: Shader) -> void:
-	free_nodes()
-	_map_w = grid.size_px().x
-	bands = int(ceil(grid.size_px().y / band_h))
 	material = ShaderMaterial.new()
 	material.shader = shader
 	rig.apply_to_material(material)
 	var tex_size := rig.texture.get_size() if rig.texture else Vector2(1, 1)
 	# One frame of the skin atlas; the shader shifts UV to the slime's skin.
 	var body_mesh := _quad(-rig.pivot, Vector2(rig.frame_w, tex_size.y), Vector2(rig.frame_w / tex_size.x, 1.0))
+	_build(world, shadows, grid, rig.texture, body_mesh, rig.shadow_alpha, "Swarm")
+
+
+## Frames mode (lasher): one atlas frame as the mesh; the shader shifts UV to the frame of the cycle.
+func setup_frames(world: Node2D, shadows: Node2D, grid: MapGrid, rig: LasherRig, shader: Shader) -> void:
+	material = ShaderMaterial.new()
+	material.shader = shader
+	var body_mesh := _quad(-rig.pivot, Vector2(rig.frame_w, rig.frame_h), Vector2(1.0 / rig.cols, 1.0 / rig.rows))
+	_build(world, shadows, grid, rig.texture, body_mesh, rig.shadow_alpha, "Lasher")
+
+
+## Bands named `<prefix>Band<b>` / `<prefix>Shadow<b>` (two crowds on one map do not clash).
+func _build(world: Node2D, shadows: Node2D, grid: MapGrid, texture: Texture2D, body_mesh: Mesh, shadow_alpha: float, prefix: String) -> void:
+	free_nodes()
+	_map_w = grid.size_px().x
+	bands = int(ceil(grid.size_px().y / band_h))
 	var shadow_mesh := _quad(Vector2(-0.5, -0.5), Vector2(1, 1), Vector2(1, 1))
 	var shadow_tex := _ellipse_texture()
 	_cap.resize(bands)
 	_cap.fill(0)
 	for b in bands:
 		var mi := MultiMeshInstance2D.new()
-		mi.name = "SwarmBand%d" % b
+		mi.name = "%sBand%d" % [prefix, b]
 		mi.position = Vector2(0, (b + 1) * band_h)
-		mi.texture = rig.texture
+		mi.texture = texture
 		mi.material = material
 		mi.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 		mi.multimesh = _new_mm(body_mesh)
@@ -54,10 +71,10 @@ func setup(world: Node2D, shadows: Node2D, grid: MapGrid, rig: SlimeRig, shader:
 		world.add_child(mi)
 		_body.append(mi)
 		var sh := MultiMeshInstance2D.new()
-		sh.name = "SwarmShadow%d" % b
+		sh.name = "%sShadow%d" % [prefix, b]
 		sh.position = mi.position
 		sh.texture = shadow_tex
-		sh.modulate = Color(0.078, 0.031, 0.11, rig.shadow_alpha)
+		sh.modulate = Color(0.078, 0.031, 0.11, shadow_alpha)
 		sh.multimesh = _new_mm(shadow_mesh)
 		sh.visible = false
 		shadows.add_child(sh)
@@ -80,17 +97,29 @@ func free_nodes() -> void:
 func refresh_material(rig: SlimeRig) -> void:
 	if material:
 		rig.apply_to_material(material)
+	refresh_shadow(rig.shadow_alpha)
+
+
+func refresh_shadow(alpha: float) -> void:
 	for sh in _shadow:
-		sh.modulate.a = rig.shadow_alpha
+		sh.modulate.a = alpha
 
 
 ## Fill the bands that intersect `view` (map px).
 func update(sim: SwarmSim, crawl: SlimeCrawl, rig: SlimeRig, view: Rect2) -> void:
+	_fill(sim, view, rig.width_px(), rig.map_scale(), Vector4(rig.shadow_w, rig.shadow_h, rig.shadow_x, rig.shadow_y), crawl, rig, null)
+
+
+## Frames mode: the same bands, each instance shows frame phase × frames, unstretched.
+func update_frames(sim: SwarmSim, rig: LasherRig, view: Rect2) -> void:
+	_fill(sim, view, rig.width_px(), rig.map_scale(), Vector4(rig.shadow_w, rig.shadow_h, rig.shadow_x, rig.shadow_y), null, null, rig)
+
+
+## `sh_k` = shadow (w, h, x, y) × width. Either `slime` + `crawl` or `frames` is set.
+func _fill(sim: SwarmSim, view: Rect2, w: float, k: float, sh_k: Vector4, crawl: SlimeCrawl, slime: SlimeRig, frames: LasherRig) -> void:
 	visible_count = 0
 	if bands == 0:
 		return
-	var k := rig.map_scale()
-	var w := rig.width_px()
 	var top_margin := w * 1.2
 	var b0 := clampi(int(floor((view.position.y - band_h) / band_h)), 0, bands - 1)
 	var b1 := clampi(int(floor((view.end.y + top_margin) / band_h)), 0, bands - 1)
@@ -100,13 +129,17 @@ func update(sim: SwarmSim, crawl: SlimeCrawl, rig: SlimeRig, view: Rect2) -> voi
 		if b < b0 or b > b1:
 			_body[b].visible = false
 			_shadow[b].visible = false
-	var scale_lut := crawl.scale_lut
-	var lean_lut := crawl.lean_lut
-	var lean_rad := crawl.lean_rad
-	var sh_w := rig.shadow_w * w
-	var sh_h := rig.shadow_h * w
-	var sh_x := rig.shadow_x * w
-	var sh_y := rig.shadow_y * w
+	var is_frames := frames != null
+	var scale_lut := crawl.scale_lut if crawl else PackedFloat32Array()
+	var lean_lut := crawl.lean_lut if crawl else PackedFloat32Array()
+	var lean_rad := crawl.lean_rad if crawl else 0.0
+	var n_frames := frames.frames if is_frames else 1
+	var f_cols := frames.cols if is_frames else 1
+	var f_rows := frames.rows if is_frames else 1
+	var sh_w := sh_k.x * w
+	var sh_h := sh_k.y * w
+	var sh_x := sh_k.z * w
+	var sh_y := sh_k.w * w
 	var sub_h := band_h / SUB_BUCKETS
 	var r0 := b0 / BANDS_PER_ROW
 	var r1 := mini(sim.rows - 1, b1 / BANDS_PER_ROW)
@@ -147,26 +180,36 @@ func update(sim: SwarmSim, crawl: SlimeCrawl, rig: SlimeRig, view: Rect2) -> voi
 			var j := 0
 			for q in SUB_BUCKETS:
 				for i in lists[half * SUB_BUCKETS + q]:
-					var s := mini(int(sim.phase[i] * SlimeCrawl.SAMPLES), SlimeCrawl.SAMPLES - 1)
-					var sx := scale_lut[s * 2]
-					var sy := scale_lut[s * 2 + 1]
 					var f := sim.face[i]
-					var sk := -lean_rad * lean_lut[s] * f
 					var x := sim.px[i]
 					var y := sim.py[i] - base_y
 					var o := j * STRIDE
-					buf[o] = sx * f * k
-					buf[o + 1] = -sin(sk) * sy * k
+					var sx := 1.0
+					if is_frames:
+						var fr := mini(int(sim.phase[i] * n_frames), n_frames - 1)
+						buf[o] = f * k
+						buf[o + 1] = 0.0
+						buf[o + 5] = k
+						buf[o + 9] = 0.0
+						buf[o + 10] = float(fr % f_cols) / f_cols
+						buf[o + 11] = float(fr / f_cols) / f_rows
+					else:
+						var s := mini(int(sim.phase[i] * SlimeCrawl.SAMPLES), SlimeCrawl.SAMPLES - 1)
+						sx = scale_lut[s * 2]
+						var sy := scale_lut[s * 2 + 1]
+						var sk := -lean_rad * lean_lut[s] * f
+						buf[o] = sx * f * k
+						buf[o + 1] = -sin(sk) * sy * k
+						buf[o + 5] = cos(sk) * sy * k
+						buf[o + 9] = slime.skin_uv_shift(slime.skin_of(sim.seed[i]))
+						buf[o + 10] = 0.0
+						buf[o + 11] = 0.0
 					buf[o + 2] = 0.0
 					buf[o + 3] = x
 					buf[o + 4] = 0.0
-					buf[o + 5] = cos(sk) * sy * k
 					buf[o + 6] = 0.0
 					buf[o + 7] = y
 					buf[o + 8] = sim.seed[i]
-					buf[o + 9] = rig.skin_uv_shift(rig.skin_of(sim.seed[i]))
-					buf[o + 10] = 0.0
-					buf[o + 11] = 0.0
 					sbuf[o] = sh_w * sx
 					sbuf[o + 1] = 0.0
 					sbuf[o + 2] = 0.0

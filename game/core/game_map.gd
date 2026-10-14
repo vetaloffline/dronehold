@@ -124,10 +124,11 @@ func objects() -> Array[MapObject]:
 	return out
 
 
-func spawn_points() -> Array[Vector2]:
+## Spawn points of one enemy kind (SpawnPoint.enemy: "slime", "lasher").
+func spawn_points(enemy := "slime") -> Array[Vector2]:
 	var out: Array[Vector2] = []
 	for o in objects():
-		if o.is_in_group("enemy_spawn"):
+		if o.is_in_group("enemy_spawn") and o.get("enemy") == enemy:
 			out.append(o.position)
 	return out
 

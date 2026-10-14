@@ -38,7 +38,8 @@ func fire(target: Vector2, tip: Vector2) -> void:
 	var to := target + Vector2((_rng.randf() - 0.5) * sp, (_rng.randf() - 0.5) * sp * rig.cam_k)
 	var d := to - tip
 	var l := maxf(d.length(), 1.0)
-	_tracers.append({"p": tip, "u": d / l, "left": l, "id": _target_id})
+	# The crowd of the target travels with the bullet: the turret may switch crowds before it lands.
+	_tracers.append({"p": tip, "u": d / l, "left": l, "id": _target_id, "sim": swarm_sim()})
 	if rig.casings:
 		var t2l := rig.tuner_to_local()
 		var side := _ang + PI / 2.0
@@ -63,7 +64,7 @@ func step_fx(dt: float) -> void:
 			continue
 		for j in 4:
 			_sparks.append(make_spark(b.p, HIT_SPARK_SPEED * t2l, Color8(255, 210, 120), 0.25))
-		var sim := swarm_sim()
+		var sim: SwarmSim = b.get("sim")
 		if sim == null or b.id < 0:
 			continue  # a pierce continuation: its damage is already done
 		var left := sim.hit_with_pool(b.id, rig.damage) if sim.alive(b.id) else rig.damage
