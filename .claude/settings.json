@@ -9,8 +9,6 @@
       "Bash(bash .claude/skills/art/scripts/clean_drafts.sh)"
     ],
     "deny": [
-      "Bash(rm -rf *)",
-      "Bash(rm -fr *)",
       "Bash(sudo *)",
       "Bash(mkfs *)",
       "Bash(dd *)",
@@ -40,7 +38,6 @@
       "Edit(~/.ssh/**)"
     ],
     "ask": [
-      "Bash(rm *)",
       "Bash(kill *)",
       "Bash(pkill *)",
       "Bash(killall *)",
@@ -62,6 +59,10 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-main.py\""
+          },
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-rm.py\""
           }
         ]
       }
