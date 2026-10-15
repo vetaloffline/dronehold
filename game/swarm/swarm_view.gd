@@ -10,10 +10,13 @@ extends RefCounted
 ##   [x.x, y.x, 0, origin.x,  x.y, y.y, 0, origin.y,  custom.r, .g, .b, .a]
 ## Transform = Godot Transform2D(scale (sx·face, sy), skew) as in slime_crawl.html:
 ##   x = (sx, 0), y = (−sin(skew)·sy, cos(skew)·sy).
-## Two modes, same bands and buffer:
+## Three modes, same bands and buffer:
 ##   slime  — setup() / update(): crawl stretch + lean from SlimeCrawl, custom = (seed, skin UV x, 0, 0);
 ##   frames — setup_frames() / update_frames(): a run-cycle atlas (LasherRig), no stretch,
-##            custom = (seed, 0, frame UV x, frame UV y); frame = phase × frames.
+##            custom = (seed, 0, frame UV x, frame UV y); frame = phase × frames;
+##   deaths — setup_deaths() / update_deaths(): a death atlas (DeathRig, Corpses), no stretch,
+##            custom = (seed, melt 0…1, frame UV x, frame UV y); frame and melt from phase × life(rate),
+##            rate = the corpse's own frame-time factor.
 
 const STRIDE := 12
 const SUB_BUCKETS := 6
@@ -48,6 +51,15 @@ func setup_frames(world: Node2D, shadows: Node2D, grid: MapGrid, rig: LasherRig,
 	material.shader = shader
 	var body_mesh := _quad(-rig.pivot, Vector2(rig.frame_w, rig.frame_h), Vector2(1.0 / rig.cols, 1.0 / rig.rows))
 	_build(world, shadows, grid, rig.texture, body_mesh, rig.shadow_alpha, "Lasher")
+
+
+## Deaths mode (Corpses): one death-atlas frame as the mesh; the death shader shifts UV to the frame
+## and melts the corpse by INSTANCE_CUSTOM.y.
+func setup_deaths(world: Node2D, shadows: Node2D, grid: MapGrid, rig: DeathRig, shader: Shader, shadow_alpha: float, prefix: String) -> void:
+	material = ShaderMaterial.new()
+	material.shader = shader
+	var body_mesh := _quad(-rig.pivot, Vector2(rig.frame_w, rig.frame_h), Vector2(1.0 / rig.cols, 1.0 / rig.rows))
+	_build(world, shadows, grid, rig.texture, body_mesh, shadow_alpha, prefix)
 
 
 ## Bands named `<prefix>Band<b>` / `<prefix>Shadow<b>` (two crowds on one map do not clash).
@@ -115,8 +127,14 @@ func update_frames(sim: SwarmSim, rig: LasherRig, view: Rect2) -> void:
 	_fill(sim, view, rig.width_px(), rig.map_scale(), Vector4(rig.shadow_w, rig.shadow_h, rig.shadow_x, rig.shadow_y), null, null, rig)
 
 
-## `sh_k` = shadow (w, h, x, y) × width. Either `slime` + `crawl` or `frames` is set.
-func _fill(sim: SwarmSim, view: Rect2, w: float, k: float, sh_k: Vector4, crawl: SlimeCrawl, slime: SlimeRig, frames: LasherRig) -> void:
+## Deaths mode: `sim.phase` = share of the corpse's life (DeathRig.life()); frame by frame_time, then
+## hold, then melt (custom.y). `k` = living map_scale() × px_scale, `w` / `sh_k` = the living enemy's.
+func update_deaths(sim: SwarmSim, rig: DeathRig, k: float, w: float, sh_k: Vector4, view: Rect2) -> void:
+	_fill(sim, view, w, k, sh_k, null, null, null, rig)
+
+
+## `sh_k` = shadow (w, h, x, y) × width. Either `slime` + `crawl`, `frames` or `death` is set.
+func _fill(sim: SwarmSim, view: Rect2, w: float, k: float, sh_k: Vector4, crawl: SlimeCrawl, slime: SlimeRig, frames: LasherRig, death: DeathRig = null) -> void:
 	visible_count = 0
 	if bands == 0:
 		return
@@ -129,13 +147,27 @@ func _fill(sim: SwarmSim, view: Rect2, w: float, k: float, sh_k: Vector4, crawl:
 		if b < b0 or b > b1:
 			_body[b].visible = false
 			_shadow[b].visible = false
-	var is_frames := frames != null
+	var is_death := death != null
+	var is_frames := frames != null or is_death
 	var scale_lut := crawl.scale_lut if crawl else PackedFloat32Array()
 	var lean_lut := crawl.lean_lut if crawl else PackedFloat32Array()
 	var lean_rad := crawl.lean_rad if crawl else 0.0
-	var n_frames := frames.frames if is_frames else 1
-	var f_cols := frames.cols if is_frames else 1
-	var f_rows := frames.rows if is_frames else 1
+	var n_frames := 1
+	var f_cols := 1
+	var f_rows := 1
+	if frames:
+		n_frames = frames.frames
+		f_cols = frames.cols
+		f_rows = frames.rows
+	elif is_death:
+		n_frames = death.frames
+		f_cols = death.cols
+		f_rows = death.rows
+	var d_frame_t := maxf(death.frame_time, 0.001) if is_death else 1.0
+	var d_hold := death.hold if is_death else 0.0
+	var d_fade := maxf(death.fade, 0.001) if is_death else 1.0
+	var d_drop := death.frame_drop if is_death else PackedFloat32Array()
+	var d_shadow := death.frame_shadow if is_death else PackedFloat32Array()
 	var sh_w := sh_k.x * w
 	var sh_h := sh_k.y * w
 	var sh_x := sh_k.z * w
@@ -185,12 +217,27 @@ func _fill(sim: SwarmSim, view: Rect2, w: float, k: float, sh_k: Vector4, crawl:
 					var y := sim.py[i] - base_y
 					var o := j * STRIDE
 					var sx := 1.0
+					var sh_s := 1.0
+					var dy := 0.0
 					if is_frames:
-						var fr := mini(int(sim.phase[i] * n_frames), n_frames - 1)
+						var fr := 0
+						var melt := 0.0
+						if is_death:
+							# rate = this corpse's frame time × (DeathRig.rnd_frame_time), see Corpses.add().
+							var ft := d_frame_t * (sim.rate[i] if sim.rate[i] > 0.0 else 1.0)
+							var anim := n_frames * ft
+							var t := sim.phase[i] * (anim + d_hold + d_fade)
+							fr = mini(int(t / ft), n_frames - 1)
+							melt = clampf((t - anim - d_hold) / d_fade, 0.0, 1.0)
+							if fr < d_drop.size():
+								dy = d_drop[fr] * k
+							sh_s = (d_shadow[fr] if fr < d_shadow.size() else 1.0) * (1.0 - melt)
+						else:
+							fr = mini(int(sim.phase[i] * n_frames), n_frames - 1)
 						buf[o] = f * k
 						buf[o + 1] = 0.0
 						buf[o + 5] = k
-						buf[o + 9] = 0.0
+						buf[o + 9] = melt
 						buf[o + 10] = float(fr % f_cols) / f_cols
 						buf[o + 11] = float(fr / f_cols) / f_rows
 					else:
@@ -208,14 +255,14 @@ func _fill(sim: SwarmSim, view: Rect2, w: float, k: float, sh_k: Vector4, crawl:
 					buf[o + 3] = x
 					buf[o + 4] = 0.0
 					buf[o + 6] = 0.0
-					buf[o + 7] = y
+					buf[o + 7] = y + dy
 					buf[o + 8] = sim.seed[i]
-					sbuf[o] = sh_w * sx
+					sbuf[o] = sh_w * sx * sh_s
 					sbuf[o + 1] = 0.0
 					sbuf[o + 2] = 0.0
 					sbuf[o + 3] = x + sh_x * f
 					sbuf[o + 4] = 0.0
-					sbuf[o + 5] = sh_h
+					sbuf[o + 5] = sh_h * sh_s
 					sbuf[o + 6] = 0.0
 					sbuf[o + 7] = y + sh_y
 					j += 1

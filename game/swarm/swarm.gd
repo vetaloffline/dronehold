@@ -10,6 +10,7 @@ signal reached(count: int)
 
 const SLIME_SHADER := preload("res://game/objects/slime/slime.gdshader")
 const DEFAULT_RIG := preload("res://game/objects/slime/slime_rig.tres")
+const DEFAULT_DEATH_RIG := preload("res://game/objects/slime/slime_death_rig.tres")
 
 @export var map: GameMap
 ## Shared slime parameters (open to tune look, eyes, blink, crawl).
@@ -21,6 +22,8 @@ const DEFAULT_RIG := preload("res://game/objects/slime/slime_rig.tres")
 		if rig and is_inside_tree():
 			rig.changed.connect(_on_rig_changed)
 			_on_rig_changed()
+## Death animation (burst, then a puddle). Empty = a killed enemy vanishes at once. Read in _ready.
+@export var death_rig: DeathRig = DEFAULT_DEATH_RIG
 
 @export_group("Count")
 ## How many slimes are kept alive on the map.
@@ -64,6 +67,8 @@ var sim: SwarmSim
 var field: FlowField
 var crawl: SlimeCrawl
 var view: SwarmView
+## Death animations (runtime only; null in the editor or without death_rig).
+var corpses: Corpses
 ## Smoothed and last-frame timings, ms (debug HUD).
 var sim_ms := 0.0
 var view_ms := 0.0
@@ -91,6 +96,11 @@ func _ready() -> void:
 	_apply_tunables()
 	view = SwarmView.new()
 	view.setup(map.world(), map.shadows(), map.grid, rig, SLIME_SHADER)
+	if death_rig and death_rig.texture and not Engine.is_editor_hint():
+		corpses = Corpses.new()
+		corpses.name = "SlimeCorpses"
+		corpses.setup(map, death_rig, rig.shadow_alpha, "SlimeDeath")
+		sim.record_deaths = true
 	_rebuild_field()
 	_ready_ok = true
 
@@ -98,6 +108,8 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	if view:
 		view.free_nodes()
+	if corpses and is_instance_valid(corpses):
+		corpses.free_view()
 
 
 ## Back in the tree (the editor does this when you switch scene tabs; _ready does not run again):
@@ -149,6 +161,8 @@ func _on_rig_changed() -> void:
 		crawl.rebuild()
 	if view:
 		view.refresh_material(rig)
+	if corpses:
+		corpses.view.refresh_shadow(rig.shadow_alpha)
 
 
 func _apply_tunables() -> void:
@@ -176,7 +190,12 @@ func _process(dt: float) -> void:
 		if n > 0:
 			reached.emit(n)
 	var t1 := Time.get_ticks_usec()
-	view.update(sim, crawl, rig, _view_rect())
+	var vr := _view_rect()
+	view.update(sim, crawl, rig, vr)
+	if corpses:
+		corpses.add(sim.deaths, rig.width_px())
+		sim.deaths.clear()
+		corpses.tick(dt, rig.map_scale(), rig.width_px(), Vector4(rig.shadow_w, rig.shadow_h, rig.shadow_x, rig.shadow_y), vr)
 	var t2 := Time.get_ticks_usec()
 	last_sim_ms = (t1 - t0) / 1000.0
 	last_view_ms = (t2 - t1) / 1000.0

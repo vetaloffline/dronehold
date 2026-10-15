@@ -15,6 +15,7 @@ func _init() -> void:
 	_test_swarm_queries()
 	_test_crawl_speed()
 	_test_lasher_run()
+	_test_deaths()
 	_test_swarm_reaches_target()
 	_test_crowd_spacing()
 	_test_crowd_gets_through()
@@ -228,6 +229,152 @@ func _test_lasher_run() -> void:
 	var speed := (s.px[0] - 112.0) / MapGrid.CELL.x / (steps * dt)
 	check(absf(speed - rig.avg_speed()) / rig.avg_speed() < 0.03, "lasher speed %.4f vs avg_speed %.4f" % [speed, rig.avg_speed()])
 
+
+func _test_deaths() -> void:
+	# A kill (damage() only) is queued for Corpses: x, y, face, seed, cause, blast angle; wounds, removal
+	# without a kill and a sim that does not record leave the queue empty.
+	var s := SwarmSim.new()
+	s.setup(8, 10, 10)
+	var a := s.spawn(Vector2(40, 30), 1.0, 3.0, 0.25, 0.0)
+	var b := s.spawn(Vector2(80, 60), 1.0, 3.0, 0.75, 0.0)
+	s.face[s.slot_of_id[a]] = -1.0
+	s.damage(a, 5.0)
+	check(s.deaths.is_empty(), "no death queue unless record_deaths")
+	s.record_deaths = true
+	s.damage(b, 1.0)
+	check(s.deaths.is_empty(), "a wound is not a death")
+	s.remove_slot(s.slot_of_id[b])
+	check(s.deaths.is_empty(), "remove_slot (reached / fewer wanted) is not a death")
+	var c := s.spawn(Vector2(50, 20), 1.0, 3.0, 0.5, 0.0)
+	s.face[s.slot_of_id[c]] = -1.0
+	s.damage(c, 3.0)
+	check(s.deaths == PackedFloat32Array([50, 20, -1, 0.5, SwarmSim.CAUSE_HIT, 0]), "a bullet kill queued as x, y, face, seed, hit, 0: %s" % [s.deaths])
+	s.deaths.clear()
+	var e := s.spawn(Vector2(40, 60), 1.0, 3.0, 0.5, 0.0)
+	s.bin()
+	s.damage_blast(Vector2(40, 30), 40.0, 10.0, 40.0, 10.0, 10.0)
+	check(s.deaths.size() == SwarmSim.DEATH_STRIDE and s.deaths[4] == SwarmSim.CAUSE_BLAST and is_equal_approx(s.deaths[5], PI / 2.0), "a grenade kill queued as blast, angle from the blast to the enemy (%s)" % [s.deaths])
+	s.damage(s.spawn(Vector2(10, 10), 1.0, 1.0, 0.5, 0.0), 5.0)
+	check(s.deaths[SwarmSim.DEATH_STRIDE + 4] == SwarmSim.CAUSE_HIT, "after the blast a plain damage() is a hit again")
+	check(e >= 0, "blast target spawned")
+	# Both death rigs load with their atlas; frames fit the texture.
+	for path in ["res://game/objects/slime/slime_death_rig.tres", "res://game/objects/lasher/lasher_death_rig.tres"]:
+		var r := load(path) as DeathRig
+		check(r != null and r.texture != null, "%s has a death atlas" % path)
+		if r and r.texture:
+			check(r.texture.get_size() == Vector2(r.frame_w * r.cols, r.frame_h * r.rows), "%s: atlas is cols × rows frames (%s)" % [path, r.texture.get_size()])
+	# Corpse life: frames, hold, melt, then gone; pieces fly, land and go with it.
+	var rig := DeathRig.new()
+	rig.frames = 5
+	rig.frame_time = 0.1
+	rig.hold = 1.0
+	rig.fade = 0.5
+	rig.frame_drop = PackedFloat32Array([0, 0, 4, 10, 12])
+	rig.rnd_frame_time = Vector2(1, 1)
+	rig.piece_hops = PackedFloat32Array()
+	rig.blood_drops = 10
+	var img := Image.create(16, 16, false, Image.FORMAT_RGBA8)
+	rig.pieces_texture = ImageTexture.create_from_image(img)
+	rig.piece_rects = [Rect2(0, 0, 8, 8), Rect2(8, 0, 8, 8)]
+	rig.piece_counts = PackedInt32Array([2, 1])
+	var cp := Corpses.new()
+	cp.rig = rig
+	cp.sim = SwarmSim.new()
+	cp.sim.setup(4, 10, 10)
+	cp.view = SwarmView.new()
+	cp.add(PackedFloat32Array([40, 30, 1, 0.5, SwarmSim.CAUSE_HIT, 0]), 20.0)
+	check(cp.sim.count == 1 and cp.piece_count() == 3, "one corpse, 3 pieces (got %d, %d)" % [cp.sim.count, cp.piece_count()])
+	check(cp.drop_count() >= 6 and cp.splat_count() == 1, "blood: 0.6…1.4 × 10 drops in the air, the pool on the ground (%d, %d)" % [cp.drop_count(), cp.splat_count()])
+	var dt := 0.05
+	var t := 0.0
+	var landed := false
+	while t < rig.life() - 0.1:
+		cp.tick(dt, 0.1, 20.0, Vector4(0.9, 0.3, 0, 0), Rect2(0, 0, 320, 240))
+		t += dt
+		if not landed and t > 1.5:
+			landed = cp._z.size() == 3 and cp._z[0] == 0.0 and cp._z[1] == 0.0 and cp._z[2] == 0.0
+	check(landed, "pieces have landed after 1.5 s")
+	check(cp.drop_count() == 0 and cp.splat_count() > 10, "every drop landed as a splat (splats %d)" % cp.splat_count())
+	check(cp.sim.count == 1 and cp.piece_count() == 3, "corpse and pieces still there just before life() ends")
+	for k in 4:
+		cp.tick(dt, 0.1, 20.0, Vector4(0.9, 0.3, 0, 0), Rect2(0, 0, 320, 240))
+	check(cp.sim.count == 0 and cp.piece_count() == 0, "corpse and pieces gone after life() (%.2f s)" % rig.life())
+	var left := 0
+	for i in cp.splat_count():
+		if cp._alpha(cp._sage[i]) > 0.0:
+			left += 1
+	check(left == 0, "no splat is visible after life() (%d of %d)" % [left, cp.splat_count()])
+	# Hops: piece_hops [0, 0, 0, 1] → every piece lands 4 + 1 times.
+	rig.piece_hops = PackedFloat32Array([0, 0, 0, 1])
+	rig.piece_counts = PackedInt32Array([1, 0])
+	rig.blood_drops = 0
+	cp.add(PackedFloat32Array([40, 30, 1, 0.5, SwarmSim.CAUSE_BLAST, 0]), 20.0)
+	var landings := 0
+	var was_up := true
+	for k in 190:  # 1.9 s: flight ≤ 0.9 s + 4 hops ≤ 0.65 s, inside life() 2 s
+		cp.tick(0.01, 0.1, 20.0, Vector4(0.9, 0.3, 0, 0), Rect2(0, 0, 320, 240))
+		var up := cp._z[0] > 0.0
+		if was_up and not up:
+			landings += 1
+		was_up = up
+	check(landings == 5, "4 hops, then it stays on the ground (landings %d)" % landings)
+	cp.free()
+	# Pieces fly bullet_scatter / blast_scatter × as far after a bullet as after a grenade (mean of many
+	# deaths, no per-death random).
+	var far := {}
+	for cause in [SwarmSim.CAUSE_HIT, SwarmSim.CAUSE_BLAST]:
+		var c2 := Corpses.new()
+		c2.rig = rig
+		rig.rnd_force = Vector2(1, 1)
+		rig.rnd_pull = Vector2(0, 0)
+		rig.piece_hops = PackedFloat32Array([0, 1])
+		rig.piece_counts = PackedInt32Array([4, 4])
+		rig.hold = 5.0
+		c2.sim = SwarmSim.new()
+		c2.sim.setup(64, 10, 10)
+		c2.view = SwarmView.new()
+		for n in 40:
+			c2.add(PackedFloat32Array([160, 120, 1, 0.5, cause, 0]), 20.0)
+		for k in 300:
+			c2.tick(0.01, 0.1, 20.0, Vector4(0.9, 0.3, 0, 0), Rect2(0, 0, 320, 240))
+		var sum := 0.0
+		for i in c2.piece_count():
+			sum += Vector2(c2._x[i] - 160, (c2._gy[i] - 120) / 0.75).length()
+		far[cause] = sum / maxi(1, c2.piece_count())
+		c2.free()
+	var ratio: float = far[SwarmSim.CAUSE_HIT] / far[SwarmSim.CAUSE_BLAST]
+	var want := rig.bullet_scatter / rig.blast_scatter
+	check(absf(ratio - want) < 0.12, "bullet pieces land %.2f × as far as grenade ones (want %.2f)" % [ratio, want])
+	rig.hold = 1.0
+	# Deaths mode writes frame UV, melt and drop into the band buffer.
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_2D
+	mm.use_custom_data = true
+	mm.instance_count = 1
+	if mm.buffer.size() == 0:
+		print("skip: deaths buffer (multimesh buffer not available in this renderer)")
+		return
+	var g := _small_grid(10, 10, [])
+	var world := Node2D.new()
+	var shadows := Node2D.new()
+	rig.texture = rig.pieces_texture
+	var v := SwarmView.new()
+	v.setup_deaths(world, shadows, g, rig, Corpses.SHADER, 0.4, "Test")
+	var ds := SwarmSim.new()
+	ds.setup(4, g.cols, g.rows)
+	ds.spawn(Vector2(48, MapGrid.CELL.y * 1.5), 0.0, 1.0, 0.5, 2.5 * rig.frame_time / rig.life())
+	ds.bin()
+	var k := 0.5
+	v.update_deaths(ds, rig, k, 20.0, Vector4(0.9, 0.3, 0, 0), Rect2(Vector2.ZERO, g.size_px()))
+	var bb := v._body[1].multimesh.buffer
+	check(is_equal_approx(bb[10], 2.0 / 5.0) and bb[9] == 0.0, "frame 2 at 2.5 frame times, not melting (uv %.3f, melt %.2f)" % [bb[10], bb[9]])
+	check(is_equal_approx(bb[7], MapGrid.CELL.y * 1.5 - 2 * MapGrid.CELL.y + 4.0 * k), "frame 2 dropped by frame_drop[2] × k (y %.2f)" % bb[7])
+	ds.phase[0] = (rig.fade_start() + rig.fade * 0.5) / rig.life()
+	v.update_deaths(ds, rig, k, 20.0, Vector4(0.9, 0.3, 0, 0), Rect2(Vector2.ZERO, g.size_px()))
+	bb = v._body[1].multimesh.buffer
+	check(is_equal_approx(bb[9], 0.5) and is_equal_approx(bb[10], 4.0 / 5.0), "half melted on the last frame (melt %.2f)" % bb[9])
+	world.free()
+	shadows.free()
 
 func _test_swarm_reaches_target() -> void:
 	var rig := load("res://game/objects/slime/slime_rig.tres") as SlimeRig

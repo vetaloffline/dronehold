@@ -1,0 +1,59 @@
+{
+ "size": [
+  1536,
+  1024
+ ],
+ "cols": 3,
+ "rows": 2,
+ "cell": 512,
+ "frames": 5,
+ "pivot_in_cell": [
+  230,
+  300
+ ],
+ "body_scale": 0.3576,
+ "body_left": 139,
+ "drop": 84,
+ "run_atlas_body_w": 213,
+ "frame_info": [
+  {
+   "frame": 0,
+   "impact": [
+    315,
+    229
+   ],
+   "cell": [
+    0,
+    0
+   ]
+  },
+  {
+   "frame": 1,
+   "cell": [
+    512,
+    0
+   ]
+  },
+  {
+   "frame": 2,
+   "cell": [
+    1024,
+    0
+   ]
+  },
+  {
+   "frame": 3,
+   "cell": [
+    0,
+    512
+   ]
+  },
+  {
+   "frame": 4,
+   "cell": [
+    512,
+    512
+   ]
+  }
+ ]
+}

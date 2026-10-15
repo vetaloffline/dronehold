@@ -49,6 +49,7 @@ tests/                         run_tests.gd (юніт), smoke_game.gd (гра + 
 | `swarm_view.gd` | `SwarmView`: `MultiMeshInstance2D` на кожну смугу 24 px (один рядок) у Y-sort світі; невидимі смуги не заповнюються і не малюються. Два режими: слизень (`setup`/`update`) і кадри (`setup_frames`/`update_frames`, lasher) |
 | `swarm.gd` | `Swarm`: нода в групі `"swarm"`, параметри в Inspector, спавн, заміри |
 | `lasher_swarm.gd` | `LasherSwarm`: другий рій на карті — свій `SwarmSim` (ті самі масиви й `step()`), точки `spawn_points("lasher")`, теж у групі `"swarm"` |
+| `corpses.gd`, `death_rig.gd`, `death.gdshader` | `Corpses`: анімації смерті одного рою — трупи в своєму `SwarmSim` (без `step()`), малює `SwarmView` у режимі смерті; уламки lasher — масиви й `_draw()`. `DeathRig` — атлас смерті, тривалості, уламки |
 | `objects/lasher/lasher_gait.gd` | біг для `step()`: відстань росте рівно з фазою, `stride` ширин кадру на цикл |
 | `objects/lasher/lasher.gdshader` | кадр атласу: `UV += INSTANCE_CUSTOM.zw` |
 | `objects/slime/slime_crawl.gd` | цикл повзання, порахований один раз у таблицю (256 точок) |
@@ -82,6 +83,31 @@ tests/                         run_tests.gd (юніт), smoke_game.gd (гра + 
 Позиції — float32: після кроку клітинка перевіряється за збереженим значенням (інакше слизень біля
 стіни округлювався в скелю й застрягав).
 У скелю не заходить (перевірка клітинки, ковзання вздовж стіни). Дійшов до ядра — зникає (`reached`).
+
+**Смерть** (`Corpses`): `SwarmSim.damage()` при вбивстві пише в `deaths` 6 чисел (x, y, face, seed,
+причина, кут від вибуху), якщо `record_deaths` — його вмикають `Swarm` / `LasherSwarm`, коли є `death_rig`
+(тільки в грі, не в редакторі). Причина `CAUSE_BLAST` — якщо `damage()` викликано зсередини
+`damage_blast()` (гранатомет), інакше `CAUSE_HIT` (куля). `remove_slot()` без `damage()` (дійшов до ядра,
+менше `target_count`) — не смерть. Щокадру рій віддає `deaths` своєму `Corpses` і очищає. Труп — слот у
+`SwarmSim` трупів: `rate` = свій множник тривалості кадру, `phase` = частка життя `DeathRig.life(rate)` =
+кадри × `frame_time` × rate + `hold` + `fade`; `SwarmView.update_deaths` бере з неї кадр, `frame_drop`
+(зсув униз), `frame_shadow` (тінь живого × множник) і танення в `custom.y` (`death.gdshader`). Масштаб трупа
+= `map_scale()` живого × `px_scale`. Атласи: слизень — `art/objects/enemies/death_atlas.py`, lasher —
+`art/objects/enemies/lasher/lasher_gore_build.py` (кадр 0 лягає на живий спрайт).
+Шар трупів — перша дитина `Shadows` карти (`z_index` −1, без Y-sort): трупи завжди під живими, їхніми
+тінями й будівлями (живий іде по калюжі, а не під нею). Ціна: бризки слизня, що вмер прямо перед стіною,
+ховаються за нею. Діти `Corpses` по черзі малювання: `Blood` (плями й калюжі), `Shadows`, `Bodies` (смуги
+трупів), `Pieces` (уламки на землі); `FlyingPieces` (`z_index` 1) — уламки й краплі в повітрі.
+Уламки lasher (`lasher_pieces_atlas.png`: стегно, гомілка, основа й кінчик щупальця, гак, щелепа) летять на
+всі боки, роблять `piece_hops` відскоків (1…6 за вагами), потім котяться (`piece_roll_share`) або ковзають
+з тертям і стають; у польоті й ковзанні кровлять. Кров: `blood_drops` крапель із `blood_from`, кожна лягає
+плямою; калюжа під рештками. Плями — 6 текстур, що `Corpses` малює раз на набір кольорів (`_make_textures`),
+одна пляма = один `draw_texture_rect`; плям і крапель — до 1500 на рій (решта не з'являється). Кожна смерть
+кидає свої множники («Per death» у `DeathRig`); уламки після кулі летять × `bullet_scatter` (0,25), після
+гранати × `blast_scatter` (1,2) і від центру вибуху; бризки крові після кулі × `bullet_blood_scatter` (0,5). Усе тане разом з трупом. Трупів не більше `DeathRig.capacity` (512): решта зникає без
+анімації. Тест `_test_deaths` (черга й причина, життя, кров, 4 відскоки, уламки кулі ближче за гранатні в `bullet_scatter / blast_scatter`);
+smoke: убитий lasher лишає труп, 15 уламків і плями. Буфер смуг у режимі смерті headless не перевіряється
+(нема буфера MultiMesh у dummy-рендері). На телефоні не міряли.
 
 **Запити:** `nearest(pos, range)`, `damage(id, dmg)`, `damage_radius(pos, r, dmg)` — читають тільки
 клітинки в радіусі.
