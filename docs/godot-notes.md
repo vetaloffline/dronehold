@@ -12,9 +12,11 @@ game/
   ui/menu_theme.tres           вигляд кнопок меню: GoldButton / DarkButton (nine-slice), шрифт
   main.tscn / main.gd          гра: карта + камера + debug HUD
   sandbox/turret_sandbox.tscn  тест турелі: відкрите поле, клік — слизень
+  sandbox/ground_sandbox.tscn  тест землі: той самий полігон (turret_sandbox.gd) 96×64 клітинки на тайлі
   editor/map_editor.tscn       редактор карти в грі (тільки для розробки): пензлі типів клітинок
   core/                        карта і все, що стоїть на сітці
     map_grid.gd                MapGrid: клітинки 32×24, тип клітинки (земля / прохід / скеля / плато)
+    tiled_ground.gd            TiledGround: земля з одного безшовного тайла на всю карту (див. «Земля з тайла»)
     game_map.gd                GameMap: корінь сцени карти (сітка, об'єкти, гниль, поле стрілок)
     map_object.gd              MapObject: база всього на сітці (cell, footprint, прилипання)
     prop.gd / spawn_point.gd   декор, точка появи ворогів (`enemy`: slime / lasher; lasher_spawn_point.tscn)
@@ -165,6 +167,18 @@ Map03 (GameMap)     layout = map_03_layout.png, grid (MapGrid, збережен�
 - `tools/build_map_03.gd` збирає сцену заново: без аргументів — розстановка `demo()` старого
   редактора; з `-- шлях/map_03.json` — розстановка, збережена кнопкою «Зберегти map.json».
   Перезапис затирає правки, зроблені в Godot.
+
+## Земля з тайла — `game/core/tiled_ground.gd`
+
+`TiledGround` (Node2D, `@tool`, `z_index` −3) малює `texture` одним `draw_texture_rect(tile = true)` на площу
+`size_px` (нуль = сітка батьківської `GameMap`). `tile` бере 1 тексель на одиницю і повторює текстуру
+(рушій: `canvas_item_add_texture_rect` ставить `CANVAS_RECT_TILE`, рендерер GLES3 для такого прямокутника
+вмикає repeat незалежно від `texture_repeat` ноди); `draw_set_transform` масштабує на `tile_px / ширина`.
+`tile_px` (320) — скільки px карти займає один тайл, крутиться в Inspector.
+Щоб при віддаленні не рябило: у `.import` тайла `mipmaps/generate=true`, на ноді `texture_filter = 4`
+(Linear Mipmap). Тайл робить `art/maps/ground/ground_dirt_make.py` з чернетки Codex (шви — мінімальний
+розріз, колір — під землю map_03). Чи видно стики тайлів на дрібних mip-рівнях — не перевіряв (headless не
+малює). На телефоні не міряли.
 
 ## Об'єкти
 
