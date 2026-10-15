@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="DeathRig" format=3]
+
+[ext_resource type="Script" path="res://game/swarm/death_rig.gd" id="1_rig"]
+[ext_resource type="Texture2D" path="res://art/objects/enemies/lasher/lasher_death_atlas.png" id="2_tex"]
+[ext_resource type="Texture2D" path="res://art/objects/enemies/lasher/lasher_pieces_atlas.png" id="3_pieces"]
+
+[resource]
+script = ExtResource("1_rig")
+texture = ExtResource("2_tex")
+frame_w = 252.0
+frame_h = 229.0
+pivot = Vector2(112.5, 179.5)
+px_scale = 1.14
+frame_time = 0.09
+hold = 10.0
+frame_shadow = PackedFloat32Array(1, 1, 0.9, 0.85, 0.8)
+pieces_texture = ExtResource("3_pieces")
+piece_rects = Array[Rect2]([Rect2(8, 8, 90, 46), Rect2(106, 8, 104, 54), Rect2(218, 8, 97, 46), Rect2(323, 8, 79, 28), Rect2(410, 8, 61, 57), Rect2(479, 8, 57, 24)])
+piece_counts = PackedInt32Array(4, 4, 2, 2, 2, 1)

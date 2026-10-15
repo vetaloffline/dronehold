@@ -7,6 +7,9 @@ var _main: Node
 var _swarm: Swarm
 var _lasher: LasherSwarm
 var _lasher_dist := 0.0
+## Max corpses / flying pieces of the lasher crowd seen at once (death animation, Corpses).
+var _lasher_corpses := 0
+var _lasher_pieces := 0
 var _frame := 0
 var _failed := 0
 var _start_dist := 0.0
@@ -737,8 +740,15 @@ func _process(_dt: float) -> bool:
 				_lasher.frozen = true
 				_lasher.target_count = 4
 				check(_lasher.spawn_at(_turret.position + Vector2(90, 30)), "a lasher spawns next to the turret")
+			if _frame > 160 and _lasher and _lasher.corpses:
+				_lasher_corpses = maxi(_lasher_corpses, _lasher.corpses.sim.count)
+				_lasher_pieces = maxi(_lasher_pieces, _lasher.corpses.piece_count())
 			if _frame == 300 and _lasher:
 				check(_lasher.sim.killed_total >= 1, "the machine gun killed a lasher (killed %d)" % _lasher.sim.killed_total)
+				check(_lasher.corpses != null and _lasher_corpses >= 1 and _lasher_pieces >= 15, "a killed lasher leaves a corpse and its limbs fly off (corpses %d, pieces %d)" % [_lasher_corpses, _lasher_pieces])
+				check(_lasher.corpses.splat_count() > 0, "the dead lasher bleeds: splats on the ground (%d)" % _lasher.corpses.splat_count())
+				var under := map.shadows()
+				check(_lasher.corpses.get_parent() == under and _swarm.corpses.get_parent() == under and _lasher.corpses.get_index() < 2 and _swarm.corpses.get_index() < 2, "corpses of both crowds are the first children of Shadows: drawn under the living and their shadows")
 				_lasher.target_count = 0
 			if _frame > 150:
 				var s := _swarm.sim

@@ -10,6 +10,7 @@ signal reached(count: int)
 
 const SHADER := preload("res://game/objects/lasher/lasher.gdshader")
 const DEFAULT_RIG := preload("res://game/objects/lasher/lasher_rig.tres")
+const DEFAULT_DEATH_RIG := preload("res://game/objects/lasher/lasher_death_rig.tres")
 
 @export var map: GameMap
 ## Shared lasher parameters (atlas, size, run cycle, shadow).
@@ -21,6 +22,8 @@ const DEFAULT_RIG := preload("res://game/objects/lasher/lasher_rig.tres")
 		if rig and is_inside_tree():
 			rig.changed.connect(_on_rig_changed)
 			_on_rig_changed()
+## Death animation (head and back burst, limbs fly off). Empty = a killed enemy vanishes at once. Read in _ready.
+@export var death_rig: DeathRig = DEFAULT_DEATH_RIG
 
 @export_group("Count")
 ## How many lashers are kept alive on the map.
@@ -57,6 +60,8 @@ var sim: SwarmSim
 var field: FlowField
 var gait: LasherGait
 var view: SwarmView
+## Death animations (runtime only; null in the editor or without death_rig).
+var corpses: Corpses
 var _spawn_cells: Array[Vector2i] = []
 var _spawn_acc := 0.0
 var _spawn_i := 0
@@ -79,6 +84,11 @@ func _ready() -> void:
 	_apply_tunables()
 	view = SwarmView.new()
 	view.setup_frames(map.world(), map.shadows(), map.grid, rig, SHADER)
+	if death_rig and death_rig.texture and not Engine.is_editor_hint():
+		corpses = Corpses.new()
+		corpses.name = "LasherCorpses"
+		corpses.setup(map, death_rig, rig.shadow_alpha, "LasherDeath")
+		sim.record_deaths = true
 	_rebuild_field()
 	_ready_ok = true
 
@@ -86,6 +96,8 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	if view:
 		view.free_nodes()
+	if corpses and is_instance_valid(corpses):
+		corpses.free_view()
 
 
 ## Back in the tree (editor scene tabs): build the bands again, deferred (see Swarm._enter_tree).
@@ -107,6 +119,8 @@ func _on_rig_changed() -> void:
 		gait.rebuild()
 	if view:
 		view.refresh_shadow(rig.shadow_alpha)
+	if corpses:
+		corpses.view.refresh_shadow(rig.shadow_alpha)
 
 
 func _apply_tunables() -> void:
@@ -132,7 +146,12 @@ func _process(dt: float) -> void:
 		var n := sim.step(dt, field, map.grid, gait, rig.width_px())
 		if n > 0:
 			reached.emit(n)
-	view.update_frames(sim, rig, Swarm.visible_map_rect(self, map))
+	var vr := Swarm.visible_map_rect(self, map)
+	view.update_frames(sim, rig, vr)
+	if corpses:
+		corpses.add(sim.deaths, rig.width_px())
+		sim.deaths.clear()
+		corpses.tick(dt, rig.map_scale(), rig.width_px(), Vector4(rig.shadow_w, rig.shadow_h, rig.shadow_x, rig.shadow_y), vr)
 
 
 func _spawn(dt: float, want: int) -> void:

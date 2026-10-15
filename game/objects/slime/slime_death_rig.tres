@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="DeathRig" format=3]
+
+[ext_resource type="Script" path="res://game/swarm/death_rig.gd" id="1_rig"]
+[ext_resource type="Texture2D" path="res://art/objects/enemies/slime/slime_death_atlas.png" id="2_tex"]
+
+[resource]
+script = ExtResource("1_rig")
+texture = ExtResource("2_tex")
+frame_w = 252.0
+frame_h = 226.0
+pivot = Vector2(142.9, 243.1)
+px_scale = 4.2968
+hold = 10.0
+frame_shadow = PackedFloat32Array(1, 1, 0.5, 0.2, 0)
+blood_drops = 36
+blood_from = Vector2(0, 0.3)
+blood_forward = Vector2(-1.3, 1.3)
+blood_up = 1.8
+blood_drop_r = Vector2(0.5, 1.3)
+blood_pool_at = Vector2(-0.059, -0.215)
+blood_pool_r = 0.3
+blood_pool_grow = 0.25
+blood_fill = Color(0.439, 0.165, 0.604, 1)
+blood_line = Color(0.165, 0.059, 0.235, 1)
+blood_highlight = Color(0.753, 0.541, 0.91, 1)

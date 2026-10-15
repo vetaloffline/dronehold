@@ -26,6 +26,18 @@ var id_of := PackedInt32Array()
 var slot_of_id := PackedInt32Array()
 var _free_ids := PackedInt32Array()
 
+## Deaths since the owner last took them, DEATH_STRIDE floats per death: x, y, face, seed, cause
+## (CAUSE_HIT — damage() from a bullet; CAUSE_BLAST — inside damage_blast(), a grenade), and the angle from
+## the blast centre to the enemy, rad (0 for a hit). Filled by damage() only when `record_deaths` is on
+## (Swarm / LasherSwarm read and clear it every frame for Corpses).
+const DEATH_STRIDE := 6
+const CAUSE_HIT := 0.0
+const CAUSE_BLAST := 1.0
+var record_deaths := false
+var deaths := PackedFloat32Array()
+var _blast := false
+var _blast_at := Vector2.ZERO
+
 ## Bins (rebuilt every tick).
 var cols := 0
 var rows := 0
@@ -139,6 +151,13 @@ func damage(id: int, amount: float) -> bool:
 		return false
 	hp[i] -= amount
 	if hp[i] <= 0.0:
+		if record_deaths:
+			deaths.append(px[i])
+			deaths.append(py[i])
+			deaths.append(face[i])
+			deaths.append(seed[i])
+			deaths.append(CAUSE_BLAST if _blast else CAUSE_HIT)
+			deaths.append(atan2(py[i] - _blast_at.y, px[i] - _blast_at.x) if _blast else 0.0)
 		remove_slot(i)
 		killed_total += 1
 		return true
@@ -264,6 +283,8 @@ func damage_blast(pos: Vector2, core_r: float, core_damage: float, radius: float
 				if d2 <= r2:
 					hit.append([id_of[i], sqrt(d2)])
 	var killed := 0
+	_blast = true
+	_blast_at = pos
 	for e in hit:
 		var d: float = e[1]
 		var amount := core_damage
@@ -271,6 +292,7 @@ func damage_blast(pos: Vector2, core_r: float, core_damage: float, radius: float
 			amount = lerpf(ring_near, ring_far, (d - core_r) / maxf(0.001, radius - core_r))
 		if damage(e[0], amount):
 			killed += 1
+	_blast = false
 	return killed
 
 

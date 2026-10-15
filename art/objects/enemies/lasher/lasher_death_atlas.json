@@ -1,0 +1,13 @@
+{
+ "frames": 5,
+ "cols": 5,
+ "rows": 1,
+ "frame_w": 252,
+ "frame_h": 229,
+ "pivot": [
+  112.5,
+  179.5
+ ],
+ "px_scale": 1.14,
+ "sheet_scale": 0.4586
+}
