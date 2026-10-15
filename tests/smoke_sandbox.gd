@@ -1,5 +1,6 @@
 extends SceneTree
 ## Turret test range headless: slimes put at «click» points, every turret kills them, freeze works.
+## Ground test range: the tiled ground covers its whole field.
 ##   godot --headless --path . --script res://tests/smoke_sandbox.gd
 ## Exit 0 and «sandbox: 0 failed» = ok.
 
@@ -68,7 +69,23 @@ func _process(_dt: float) -> bool:
 			_frozen_pos = _swarm.sim.position_of(_swarm.sim.id_of[0])
 		2800:
 			check(_swarm.sim.count == 0 or _swarm.sim.position_of(_swarm.sim.id_of[0]) == _frozen_pos, "frozen slime does not move")
+			_check_ground_sandbox()
 			print("sandbox: %d failed" % _failed)
 			quit(1 if _failed > 0 else 0)
 			return true
 	return false
+
+
+## Ground test range: one TiledGround under everything, covering the whole field with mipmapped sampling.
+func _check_ground_sandbox() -> void:
+	var sb := (load("res://game/sandbox/ground_sandbox.tscn") as PackedScene).instantiate()
+	root.add_child(sb)
+	var map := sb.get_node("Map") as GameMap
+	var g := sb.get_node_or_null("Map/Ground") as TiledGround
+	check(g != null and g.texture != null, "ground range: Ground is a TiledGround with a texture")
+	if g and g.texture:
+		check(g.texture.get_size() == Vector2(1024, 1024), "ground tile is 1024×1024 (%s)" % g.texture.get_size())
+		check(g.area() == map.grid.size_px(), "ground covers the whole field (%s)" % g.area())
+		check(g.z_index == -3 and g.texture_filter == CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS, "ground: z −3, linear mipmap filter")
+	check(sb.get_node("Map/World").find_children("*", "MapObject", false, false).size() == 1, "ground range has the test turret")
+	sb.free()

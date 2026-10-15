@@ -26,7 +26,7 @@ paths:
 
 | `z_index` | Що | Де видно в коді |
 |---|---|---|
-| −3 | земля | `game/maps/map_03/map_03.tscn` |
+| −3 | земля | `game/maps/map_03/map_03.tscn`, `game/core/tiled_ground.gd` (`ground_sandbox.tscn`) |
 | −2 | гниль (фіолетова земля) | `map_03.tscn` |
 | −1 | тіні об'єктів, слизнів і lasher; під ними (перші діти `Shadows`) — трупи й уламки, що лежать | `map_03.tscn`, `drill.tscn`, `relay.tscn`, `crystal_vein.tscn`, `game/swarm/corpses.gd` |
 | 0 | світ (Y-sort) | — |
