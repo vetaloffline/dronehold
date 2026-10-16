@@ -31,7 +31,7 @@ paths:
 | −1 | тіні об'єктів, слизнів і lasher; під ними (перші діти `Shadows`) — трупи й уламки, що лежать | `map_03.tscn`, `drill.tscn`, `relay.tscn`, `crystal_vein.tscn`, `game/swarm/corpses.gd` |
 | 0 | світ (Y-sort) | — |
 | +1…+10 | ефекти пострілів і бура, уламки ворога в польоті | `drill.gd` (`_fx`), `machine_gun.tscn`, `grenade_launcher.tscn`, `game/swarm/corpses.gd` |
-| 10 | накладка сітки, примарки будівництва | `map_03.tscn`, `game/ui/build_menu.gd` |
+| 10 | накладка сітки, примарки будівництва, клітинки скель (тільки в редакторі) | `map_03.tscn`, `game/ui/build_menu.gd`, `game/core/cliff_cells.tscn` |
 | 20 | маркер слоту бура, курсор редактора карти | `crystal_vein.gd`, `game/editor/map_editor.gd` |
 | 100 | спливний текст | `game/ui/float_text.gd` |
 

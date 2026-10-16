@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="CliffRig" format=3]
+
+[ext_resource type="Resource" path="res://game/core/cliff_blocks.tres" id="1_dgqxd"]
+[ext_resource type="Script" path="res://game/core/cliff_rig.gd" id="2_yrdgs"]
+
+[resource]
+script = ExtResource("2_yrdgs")
+blocks = ExtResource("1_dgqxd")

@@ -304,5 +304,215 @@
    272,
    188
   ]
+ },
+ {
+  "name": "cliff_spire",
+  "file": "prop_cliff_spire.png",
+  "foot": [
+   1,
+   1
+  ],
+  "foot_cells": [
+   2,
+   2
+  ],
+  "ground": [
+   109.0,
+   414.0
+  ],
+  "body_w": 128.0,
+  "size": [
+   207,
+   426
+  ]
+ },
+ {
+  "name": "cliff_twin_spires",
+  "file": "prop_cliff_twin_spires.png",
+  "foot": [
+   2,
+   1
+  ],
+  "foot_cells": [
+   3,
+   2
+  ],
+  "ground": [
+   126.0,
+   362.0
+  ],
+  "body_w": 192.0,
+  "size": [
+   258,
+   370
+  ]
+ },
+ {
+  "name": "cliff_crest",
+  "file": "prop_cliff_crest.png",
+  "foot": [
+   2,
+   1
+  ],
+  "foot_cells": [
+   4,
+   2
+  ],
+  "ground": [
+   198.0,
+   243.0
+  ],
+  "body_w": 256.0,
+  "size": [
+   352,
+   252
+  ]
+ },
+ {
+  "name": "cliff_rockfall",
+  "file": "prop_cliff_rockfall.png",
+  "foot": [
+   2,
+   2
+  ],
+  "foot_cells": [
+   4,
+   3
+  ],
+  "ground": [
+   180.0,
+   192.0
+  ],
+  "body_w": 256.0,
+  "size": [
+   335,
+   209
+  ]
+ },
+ {
+  "name": "cliff_slab",
+  "file": "prop_cliff_slab.png",
+  "foot": [
+   1,
+   1
+  ],
+  "foot_cells": [
+   2,
+   2
+  ],
+  "ground": [
+   82.5,
+   284.0
+  ],
+  "body_w": 128.0,
+  "size": [
+   199,
+   297
+  ]
+ },
+ {
+  "name": "cliff_split",
+  "file": "prop_cliff_split.png",
+  "foot": [
+   2,
+   1
+  ],
+  "foot_cells": [
+   3,
+   2
+  ],
+  "ground": [
+   121.0,
+   238.0
+  ],
+  "body_w": 192.0,
+  "size": [
+   258,
+   249
+  ]
+ },
+ {
+  "name": "cliff_scree",
+  "file": "prop_cliff_scree.png",
+  "foot": [
+   2,
+   1
+  ],
+  "foot_cells": [
+   4,
+   2
+  ],
+  "ground": [
+   146.5,
+   141.0
+  ],
+  "body_w": 256.0,
+  "size": [
+   308,
+   149
+  ]
+ },
+ {
+  "name": "cliff_ledge",
+  "file": "prop_cliff_ledge.png",
+  "foot": [
+   2,
+   2
+  ],
+  "foot_cells": [
+   3,
+   3
+  ],
+  "ground": [
+   167.5,
+   254.0
+  ],
+  "body_w": 192.0,
+  "size": [
+   273,
+   265
+  ]
+ },
+ {
+  "name": "cliff_arch",
+  "file": "prop_cliff_arch.png",
+  "foot": [
+   2,
+   2
+  ],
+  "foot_cells": [
+   4,
+   3
+  ],
+  "ground": [
+   166.0,
+   259.0
+  ],
+  "body_w": 256.0,
+  "size": [
+   326,
+   272
+  ]
+ },
+ {
+  "name": "cliff_fallen_pillar",
+  "file": "prop_cliff_fallen_pillar.png",
+  "foot": [
+   2,
+   1
+  ],
+  "foot_cells": [
+   4,
+   2
+  ],
+  "ground": [
+   179.0,
+   147.0
+  ],
+  "body_w": 256.0,
+  "size": [
+   276,
+   163
+  ]
  }
 ]

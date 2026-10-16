@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/core/cliffs.gd" id="1_ey243"]
+[ext_resource type="Resource" path="res://game/core/cliff_rig.tres" id="2_an7gh"]
+
+[node name="Cliffs" type="Node2D" unique_id=1493284147]
+script = ExtResource("1_ey243")
+rig = ExtResource("2_an7gh")

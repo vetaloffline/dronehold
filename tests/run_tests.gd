@@ -29,6 +29,8 @@ func _init() -> void:
 	_test_wall_line()
 	_test_wall_holds_slimes()
 	_test_light_mg()
+	_test_cliffs()
+	_test_rock_decor()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	quit(1 if _failed > 0 else 0)
 
@@ -772,3 +774,125 @@ func _test_light_mg() -> void:
 		"light MG scene: LightMachineGun, 2×2 cells, name «Легкий кулемет»")
 	if t:
 		t.free()
+
+
+func _cells(list: Array) -> Dictionary:
+	var d := {}
+	for c in list:
+		d[c] = true
+	return d
+
+
+func _test_cliffs() -> void:
+	# docs/concept.md «Скелі»: one drawn block per painted cell; wall columns for the map edge, natural rock
+	# with ends sloping down and humps / peaks inside.
+	var bl := load("res://game/core/cliff_blocks.tres") as CliffBlocks
+	check(bl != null and bl.atlas != null and bl.rects.size() == 16 and bl.grounds.size() == 16 and bl.texels.size() == 16,
+		"cliff blocks: atlas + 16 blocks with ground points and scale")
+	if bl == null:
+		return
+	var inside := true
+	for r in bl.rects:
+		inside = inside and Rect2(Vector2.ZERO, bl.atlas.get_size()).encloses(r)
+	check(inside, "every block rect lies inside the atlas")
+	check(bl.pick_list(CliffBlocks.Group.WALL).size() == 8 and bl.pick_list(CliffBlocks.Group.ROCK).size() == 8,
+		"8 wall blocks, 8 rock blocks")
+	var all_kinds := true
+	for k in 4:
+		all_kinds = all_kinds and not bl.pick_list(CliffBlocks.Group.ROCK, k).is_empty()
+	check(all_kinds, "rock blocks of every height: low, mid, tall, peak")
+	# The hash is the one of art/maps/cliffs/rock_blocks_preview.py (values from Python).
+	check(absf(Cliffs.hash01(5, 9, 7) - 0.76957) < 1e-4 and absf(Cliffs.hash01(120, 77, 11) - 0.01295) < 1e-4,
+		"hash01 matches the preview script (%.5f, %.5f)" % [Cliffs.hash01(5, 9, 7), Cliffs.hash01(120, 77, 11)])
+	var cl := Cliffs.new()
+	cl.rig = load("res://game/core/cliff_rig.tres") as CliffRig
+	# A 1-cell ridge of 20: low at both ends, mid next to them, never low inside.
+	var line := []
+	for c in range(10, 30):
+		line.append(Vector2i(c, 5))
+	var k := cl.rock_kinds(_cells(line))
+	var low := CliffBlocks.Kind.LOW
+	var mid := CliffBlocks.Kind.MID
+	var lows := 0
+	for p in line:
+		if k[p] == low:
+			lows += 1
+	check(k[Vector2i(10, 5)] == low and k[Vector2i(29, 5)] == low and k[Vector2i(11, 5)] == mid and k[Vector2i(28, 5)] == mid and lows == 2,
+		"ridge: low at the ends, mid next to them, no low inside (%d low)" % lows)
+	# A long 2-thick ridge: peaks are rare and never within peak_radius of each other.
+	var ridge := []
+	for c in range(0, 80):
+		ridge.append(Vector2i(c, 20))
+		ridge.append(Vector2i(c, 21))
+	var kr := cl.rock_kinds(_cells(ridge))
+	var peaks: Array[Vector2i] = []
+	for p in ridge:
+		if kr[p] == CliffBlocks.Kind.PEAK:
+			peaks.append(p)
+	var apart := true
+	for a in peaks:
+		for b in peaks:
+			if a != b and absi(a.x - b.x) <= cl.rig.peak_radius and absi(a.y - b.y) <= cl.rig.peak_radius:
+				apart = false
+	check(peaks.size() < ridge.size() / 10 and apart, "ridge: %d peaks on %d cells, none within %d cells of another" % [peaks.size(), ridge.size(), cl.rig.peak_radius])
+	# A closed ring of rock has no ends: no low blocks.
+	var ring := []
+	for r in range(0, 10):
+		for c in range(0, 12):
+			if c < 2 or r < 2 or c >= 10 or r >= 8:
+				ring.append(Vector2i(c, r))
+	var kg := cl.rock_kinds(_cells(ring))
+	var ring_low := 0
+	for p in ring:
+		if kg[p] == low:
+			ring_low += 1
+	# Its 4 outer corners are L-seeds (2 perpendicular neighbours): they slope; nothing else does.
+	check(ring_low == 4, "closed ring: only its 4 outer corners are low (%d)" % ring_low)
+	# One block per cell, the same cliff every time from the same cells.
+	var wall := _cells([Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)])
+	var rows := cl.place(wall, _cells(line))
+	var n := 0
+	for r in rows:
+		n += (rows[r] as Array).size()
+	var again := cl.place(wall, _cells(line))
+	check(n == 3 + line.size() and str(rows) == str(again), "one block per cell (%d), placement is deterministic" % n)
+	# Decor stands on the top of a block: above the cell's south edge, below the map top; nothing off the cliff.
+	var top := cl.top_y_at(Vector2i(15, 5))
+	var low_top := cl.top_y_at(Vector2i(10, 5))
+	check(not is_nan(top) and top < 6 * MapGrid.CELL.y - 20.0 and is_nan(cl.top_y_at(Vector2i(15, 7))),
+		"block top on a rock cell is above its south edge (%.1f < %.1f), none off the cliff" % [top, 6 * MapGrid.CELL.y - 20.0])
+	check(not is_nan(low_top) and low_top > top, "the low end of a ridge has a lower top than its middle (%.1f > %.1f)" % [low_top, top])
+	cl.free()
+	# In the game the cliff cells are rock and no-fly.
+	var g := MapGrid.open(10, 8)
+	var used: Array[Vector2i] = [Vector2i(2, 2), Vector2i(3, 2), Vector2i(40, 40)]
+	Cliffs.apply_to_grid(g, used)
+	check(g.kind(2, 2) == MapGrid.Kind.ROCK and g.is_blocked(3, 2) and not g.can_build(3, 2) and g.fly_blocked(2, 2)
+		and not g.is_blocked(4, 2) and not g.fly_blocked(4, 2), "cliff cells: rock (no build, no walk) and no-fly; others untouched")
+
+
+func _test_rock_decor() -> void:
+	# Rock decor for cliffs (art/maps/rock_decor, 2026-10-16): 10 prop kinds from props.json, exact footprints in
+	# 32×24 cells (foot_cells), drawn at 1/2 (Codex drew 2 px per map px), ground point inside the sprite.
+	var kinds := ["cliff_spire", "cliff_twin_spires", "cliff_crest", "cliff_rockfall", "cliff_slab", "cliff_split",
+		"cliff_scree", "cliff_ledge", "cliff_arch", "cliff_fallen_pillar"]
+	var feet := [Vector2i(2, 2), Vector2i(3, 2), Vector2i(4, 2), Vector2i(4, 3), Vector2i(2, 2), Vector2i(3, 2),
+		Vector2i(4, 2), Vector2i(3, 3), Vector2i(4, 3), Vector2i(4, 2)]
+	var bad: Array[String] = []
+	for i in kinds.size():
+		var p := (load("res://game/core/prop.tscn") as PackedScene).instantiate() as Prop
+		p.kind = kinds[i]
+		p._load_kind()
+		var tex := p.texture
+		if tex == null or p.foot != feet[i] or absf(p.get_map_scale() - 0.5) > 0.01 \
+				or not Rect2(Vector2.ZERO, tex.get_size()).has_point(p.ground):
+			bad.append("%s (foot %s, scale %.2f)" % [kinds[i], p.foot, p.get_map_scale()])
+		p.free()
+	check(bad.is_empty(), "rock decor: 10 kinds load, exact footprints, drawn at 1/2, ground in the sprite %s" % [bad])
+	var spire := Prop.new()
+	spire.kind = "cliff_spire"
+	var scree := Prop.new()
+	scree.kind = "cliff_scree"
+	check(spire.blocks_flight() and not scree.blocks_flight(), "drones fly round a spire, over scree")
+	spire.free()
+	scree.free()

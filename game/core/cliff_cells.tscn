@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="TileSet" path="res://game/core/cliff_cells.tres" id="1_s3ryg"]
+[ext_resource type="Script" path="res://game/core/cliff_cells.gd" id="2_nimhw"]
+
+[node name="CliffCells" type="TileMapLayer" unique_id=825718494]
+z_index = 10
+tile_set = ExtResource("1_s3ryg")
+script = ExtResource("2_nimhw")
