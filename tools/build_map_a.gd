@@ -1,7 +1,9 @@
 extends SceneTree
 ## Builds map A from its layout (art/maps/map_a/map_a.json, made by art/maps/map_a/map_a_natural.py):
 ##   game/maps/map_a/map_a.tscn       the map: tiled ground, rot, cliff cells (wall at the edge, rock inside)
-##                                    + Cliffs, core, veins with drill side, slime / lasher spawns, swarms;
+##                                    + Cliffs, core, veins with drill side, rock decor (Prop), dressing
+##                                    along the cliffs (Prop, art/maps/map_a/map_a_dressing.json, made by
+##                                    map_a_dressing.py), slime / lasher spawns, swarms;
 ##                                    rot, overlay and swarm settings copied from map_03
 ##   game/maps/map_a/map_a_grid.tres  an all-ground 128×96 grid (cliffs turn into rock in the game)
 ##   (game/main.tscn plays this map: its MapA node is an instance of map_a.tscn)
@@ -68,6 +70,29 @@ func _init() -> void:
 		vein.drill_side = CrystalVein.Side.LEFT if v[2] == "L" else CrystalVein.Side.RIGHT
 		vein.cell = Vector2i(v[0], v[1])
 		world.add_child(vein)
+	# Rock decor (Prop kinds cliff_*): on a cliff cell it stands on the cliff's top by itself (Prop._cliff_top).
+	var per_kind := {}
+	for d in data.get("decor", []):
+		var p := (load("res://game/core/prop.tscn") as PackedScene).instantiate() as Prop
+		per_kind[d[0]] = per_kind.get(d[0], 0) + 1
+		p.name = "%s%d" % [String(d[0]).to_pascal_case(), per_kind[d[0]]]
+		p.kind = d[0]
+		p._load_kind()
+		p.cell = Vector2i(d[1], d[2])
+		world.add_child(p)
+	# Dressing along the cliffs (art/maps/map_a/map_a_dressing.json, made by map_a_dressing.py): trees, boulders,
+	# bushes, stones; decor = walk through and build over. Straight in World: GameMap.objects() reads only its
+	# direct children. Named by kind: TreeTall1, BushRound2…
+	var dress: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://art/maps/map_a/map_a_dressing.json"))
+	for d in dress["props"]:
+		var p := (load("res://game/core/prop.tscn") as PackedScene).instantiate() as Prop
+		per_kind[d[0]] = per_kind.get(d[0], 0) + 1
+		p.name = "%s%d" % [String(d[0]).to_pascal_case(), per_kind[d[0]]]
+		p.kind = d[0]
+		p._load_kind()
+		p.cell = Vector2i(d[1], d[2])
+		p.decor = d[3]
+		world.add_child(p)
 	var spawns := Node2D.new()
 	spawns.name = "Spawns"
 	map.add_child(spawns)

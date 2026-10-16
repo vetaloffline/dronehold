@@ -30,6 +30,7 @@ func _init() -> void:
 	_test_wall_holds_slimes()
 	_test_light_mg()
 	_test_cliffs()
+	_test_rock_decor()
 	print("tests: %d passed, %d failed" % [_passed, _failed])
 	quit(1 if _failed > 0 else 0)
 
@@ -868,3 +869,30 @@ func _test_cliffs() -> void:
 	Cliffs.apply_to_grid(g, used)
 	check(g.kind(2, 2) == MapGrid.Kind.ROCK and g.is_blocked(3, 2) and not g.can_build(3, 2) and g.fly_blocked(2, 2)
 		and not g.is_blocked(4, 2) and not g.fly_blocked(4, 2), "cliff cells: rock (no build, no walk) and no-fly; others untouched")
+
+
+func _test_rock_decor() -> void:
+	# Rock decor for cliffs (art/maps/rock_decor, 2026-10-16): 10 prop kinds from props.json, exact footprints in
+	# 32×24 cells (foot_cells), drawn at 1/2 (Codex drew 2 px per map px), ground point inside the sprite.
+	var kinds := ["cliff_spire", "cliff_twin_spires", "cliff_crest", "cliff_rockfall", "cliff_slab", "cliff_split",
+		"cliff_scree", "cliff_ledge", "cliff_arch", "cliff_fallen_pillar"]
+	var feet := [Vector2i(2, 2), Vector2i(3, 2), Vector2i(4, 2), Vector2i(4, 3), Vector2i(2, 2), Vector2i(3, 2),
+		Vector2i(4, 2), Vector2i(3, 3), Vector2i(4, 3), Vector2i(4, 2)]
+	var bad: Array[String] = []
+	for i in kinds.size():
+		var p := (load("res://game/core/prop.tscn") as PackedScene).instantiate() as Prop
+		p.kind = kinds[i]
+		p._load_kind()
+		var tex := p.texture
+		if tex == null or p.foot != feet[i] or absf(p.get_map_scale() - 0.5) > 0.01 \
+				or not Rect2(Vector2.ZERO, tex.get_size()).has_point(p.ground):
+			bad.append("%s (foot %s, scale %.2f)" % [kinds[i], p.foot, p.get_map_scale()])
+		p.free()
+	check(bad.is_empty(), "rock decor: 10 kinds load, exact footprints, drawn at 1/2, ground in the sprite %s" % [bad])
+	var spire := Prop.new()
+	spire.kind = "cliff_spire"
+	var scree := Prop.new()
+	scree.kind = "cliff_scree"
+	check(spire.blocks_flight() and not scree.blocks_flight(), "drones fly round a spire, over scree")
+	spire.free()
+	scree.free()

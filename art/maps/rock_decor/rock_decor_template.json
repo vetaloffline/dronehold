@@ -1,0 +1,193 @@
+{
+ "size": [
+  1536,
+  1024
+ ],
+ "cell": [
+  307,
+  512
+ ],
+ "texels_per_map_px": 2,
+ "pieces": [
+  {
+   "name": "spire",
+   "foot_cells": [
+    2,
+    2
+   ],
+   "height_map_px": 150,
+   "foot": [
+    153,
+    440
+   ],
+   "cell_box": [
+    0,
+    0,
+    307,
+    512
+   ]
+  },
+  {
+   "name": "twin_spires",
+   "foot_cells": [
+    3,
+    2
+   ],
+   "height_map_px": 130,
+   "foot": [
+    460,
+    440
+   ],
+   "cell_box": [
+    307,
+    0,
+    307,
+    512
+   ]
+  },
+  {
+   "name": "jagged_crest",
+   "foot_cells": [
+    4,
+    2
+   ],
+   "height_map_px": 80,
+   "foot": [
+    767,
+    440
+   ],
+   "cell_box": [
+    614,
+    0,
+    307,
+    512
+   ]
+  },
+  {
+   "name": "rockfall",
+   "foot_cells": [
+    4,
+    3
+   ],
+   "height_map_px": 60,
+   "foot": [
+    1074,
+    440
+   ],
+   "cell_box": [
+    921,
+    0,
+    307,
+    512
+   ]
+  },
+  {
+   "name": "leaning_slab",
+   "foot_cells": [
+    2,
+    2
+   ],
+   "height_map_px": 90,
+   "foot": [
+    1381,
+    440
+   ],
+   "cell_box": [
+    1228,
+    0,
+    307,
+    512
+   ]
+  },
+  {
+   "name": "split_boulder",
+   "foot_cells": [
+    3,
+    2
+   ],
+   "height_map_px": 70,
+   "foot": [
+    153,
+    952
+   ],
+   "cell_box": [
+    0,
+    512,
+    307,
+    512
+   ]
+  },
+  {
+   "name": "scree",
+   "foot_cells": [
+    4,
+    2
+   ],
+   "height_map_px": 22,
+   "foot": [
+    460,
+    952
+   ],
+   "cell_box": [
+    307,
+    512,
+    307,
+    512
+   ]
+  },
+  {
+   "name": "broken_ledge",
+   "foot_cells": [
+    3,
+    3
+   ],
+   "height_map_px": 75,
+   "foot": [
+    767,
+    952
+   ],
+   "cell_box": [
+    614,
+    512,
+    307,
+    512
+   ]
+  },
+  {
+   "name": "arch",
+   "foot_cells": [
+    4,
+    3
+   ],
+   "height_map_px": 120,
+   "foot": [
+    1074,
+    952
+   ],
+   "cell_box": [
+    921,
+    512,
+    307,
+    512
+   ]
+  },
+  {
+   "name": "fallen_pillar",
+   "foot_cells": [
+    4,
+    2
+   ],
+   "height_map_px": 40,
+   "foot": [
+    1381,
+    952
+   ],
+   "cell_box": [
+    1228,
+    512,
+    307,
+    512
+   ]
+  }
+ ]
+}

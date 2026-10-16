@@ -111,6 +111,16 @@ def edge(L, extra, salt):
                 L.rock.add((c, r))
 
 
+# Rock decor (art/maps/rock_decor, Prop kinds cliff_*): kind, top-left cell of the footprint. On a cliff cell a
+# Prop stands on the cliff's top by itself (Cliffs.top_y_at); the rest stand on the ground at the foot / in the field.
+DECOR = [
+    ("cliff_spire", 33, 44), ("cliff_twin_spires", 61, 61), ("cliff_crest", 45, 49), ("cliff_spire", 77, 20),
+    ("cliff_slab", 51, 33), ("cliff_rockfall", 41, 54), ("cliff_scree", 57, 69), ("cliff_split", 70, 41),
+    ("cliff_ledge", 24, 50), ("cliff_arch", 96, 30), ("cliff_fallen_pillar", 38, 20), ("cliff_scree", 30, 37),
+    ("cliff_rockfall", 86, 46), ("cliff_twin_spires", 22, 17), ("cliff_crest", 98, 55),
+]
+
+
 def build():
     L = Layout("A", "Ущелина (природна)", "База в куті. Хребет-крива відгороджує кут, 3 ущелини-проходи; вороги з протилежного кута через поле з камінням.")
     edge(L, 7.0, 40)
@@ -209,7 +219,7 @@ def main() -> int:
     game_look(L, a.cut, a.out)
     with open(os.path.join(a.out, "map_a.json"), "w") as f:
         json.dump({"size": [COLS, ROWS], "wall": sorted(L.wall), "rock": sorted(L.rock), "core": L.core, "veins": L.veins,
-                   "slime": L.slime, "lasher": L.lasher, "paths": [{k: v for k, v in p.items() if k != "path"} for p in paths],
+                   "slime": L.slime, "lasher": L.lasher, "decor": [list(d) for d in DECOR], "paths": [{k: v for k, v in p.items() if k != "path"} for p in paths],
                    "vein_checks": veins}, f)
         f.write("\n")
     return 1 if errs else 0

@@ -1,7 +1,8 @@
 @tool
 class_name Prop
 extends MapObject
-## Decor from art/maps/props (rocks, trees, bushes). Pick `kind` in the Inspector.
+## Decor from art/maps/props (rocks, trees, bushes, rock decor for cliffs: spires, rockfall, arch…). Pick `kind`
+## in the Inspector.
 ## Placement = map_03_editor.html drawObj() for props: sprite scale = w·cell_w·fill / body_w,
 ## ground point at the footprint centre, 0.85 of its height down.
 ## The data (texture, ground point, size) is copied from props.json when `kind` changes and is
@@ -15,9 +16,11 @@ const PROPS_JSON := "res://art/maps/props/props.json"
 const PROPS_DIR := "res://art/maps/props/"
 ## Kinds the drones fly round when `flight` is Auto: trees and big rocks (rule of 2026-10-09).
 const FLY_ROUND_KINDS := ["tree_tall", "tree_mid", "tree_small", "trees_3", "trees_5", "tree_dead",
-	"rock_m1", "rock_m2", "rock_m3", "rock_spire", "rock_mesa"]
+	"rock_m1", "rock_m2", "rock_m3", "rock_spire", "rock_mesa",
+	"cliff_spire", "cliff_twin_spires", "cliff_crest", "cliff_rockfall", "cliff_slab", "cliff_split", "cliff_ledge",
+	"cliff_arch"]
 
-@export_enum("rock_s1", "rock_s2", "rock_s3", "rock_m1", "rock_m2", "rock_m3", "rock_spire", "rock_mesa", "rock_pit", "tree_tall", "tree_mid", "tree_small", "trees_3", "trees_5", "tree_dead", "bush_round", "bush_wide", "stump")
+@export_enum("rock_s1", "rock_s2", "rock_s3", "rock_m1", "rock_m2", "rock_m3", "rock_spire", "rock_mesa", "rock_pit", "tree_tall", "tree_mid", "tree_small", "trees_3", "trees_5", "tree_dead", "bush_round", "bush_wide", "stump", "cliff_spire", "cliff_twin_spires", "cliff_crest", "cliff_rockfall", "cliff_slab", "cliff_split", "cliff_scree", "cliff_ledge", "cliff_arch", "cliff_fallen_pillar")
 var kind := "rock_s1":
 	set(v):
 		kind = v
@@ -141,8 +144,12 @@ func _load_kind() -> void:
 		return
 	for p in data:
 		if p.get("name") == kind:
-			# props.json counts 64×48 cells (old HTML editor); the grid is 32×24.
-			foot = Vector2i(int(p["foot"][0]), int(p["foot"][1])) * 2
+			# props.json `foot` counts 64×48 cells (old HTML editor); the grid is 32×24. Newer entries (rock decor,
+			# art/maps/rock_decor/rock_decor_props.py) give `foot_cells` in 32×24 cells — odd sizes fit there.
+			if p.has("foot_cells"):
+				foot = Vector2i(int(p["foot_cells"][0]), int(p["foot_cells"][1]))
+			else:
+				foot = Vector2i(int(p["foot"][0]), int(p["foot"][1])) * 2
 			ground = Vector2(p["ground"][0], p["ground"][1])
 			body_w = float(p["body_w"])
 			texture = load(PROPS_DIR + String(p["file"])) as Texture2D
