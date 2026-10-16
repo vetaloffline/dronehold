@@ -31,8 +31,8 @@ var _vein_l: CrystalVein
 func _initialize() -> void:
 	_main = (load("res://game/main.tscn") as PackedScene).instantiate()
 	root.add_child(_main)
-	_swarm = _main.get_node("Map03/Swarm") as Swarm
-	_lasher = _main.get_node_or_null("Map03/LasherSwarm") as LasherSwarm
+	_swarm = (_main.get("map") as GameMap).get_node("Swarm") as Swarm
+	_lasher = (_main.get("map") as GameMap).get_node_or_null("LasherSwarm") as LasherSwarm
 
 
 func check(cond: bool, what: String) -> void:
@@ -195,7 +195,7 @@ func _free_cell(map: GameMap, item: BuildItem) -> Vector2i:
 
 
 ## A relay put straight onto the map (no build rules) next to vein `v`, its drill slot inside the
-## relay's build radius: no vein slot of map_03 is inside the core's. Free it after the test.
+## relay's build radius (the vein may be outside the core's radius). Free it after the test.
 func _relay_near(map: GameMap, v: CrystalVein) -> MapObject:
 	var relay_i := _item(load("res://game/core/build_catalog.tres") as BuildCatalog, "Ретранслятор")
 	var s := v.drill_slot_cell()
@@ -676,7 +676,7 @@ func _test_build_menu(map: GameMap) -> void:
 
 
 func _target() -> Vector2:
-	var map := _main.get_node("Map03") as GameMap
+	var map := _main.get("map") as GameMap
 	var cells := map.target_cells()
 	return map.grid.cell_center(cells[14]) if cells.size() > 14 else Vector2.ZERO
 
@@ -696,7 +696,7 @@ func _process(_dt: float) -> bool:
 		printerr("FAIL: no swarm or the test did not finish in 5000 frames")
 		quit(1)
 		return true
-	var map := _main.get_node("Map03") as GameMap
+	var map := _main.get("map") as GameMap
 	match _stage:
 		0:
 			if _frame == 1:

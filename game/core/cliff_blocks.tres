@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CliffBlocks" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://game/core/cliff_blocks.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://art/maps/cliffs/cliff_atlas.png" id="2_atlas"]
+
+[resource]
+script = ExtResource("1_script")
+atlas = ExtResource("2_atlas")
+rects = Array[Rect2]([Rect2(276, 8, 197, 369), Rect2(481, 8, 206, 369), Rect2(1735, 8, 204, 358), Rect2(910, 8, 195, 364), Rect2(695, 8, 207, 368), Rect2(1526, 8, 201, 361), Rect2(1113, 8, 194, 364), Rect2(1315, 8, 203, 364), Rect2(8, 8, 260, 517), Rect2(8, 533, 254, 358), Rect2(270, 533, 250, 355), Rect2(1110, 533, 282, 280), Rect2(819, 533, 283, 287), Rect2(528, 533, 283, 288), Rect2(1400, 533, 312, 196), Rect2(1720, 533, 313, 186)])
+grounds = PackedVector2Array(90.5, 358, 85, 352, 96.5, 351, 94, 354, 99.5, 353, 100, 350, 99.5, 350, 113, 353, 140, 497, 167, 349, 116, 331, 152, 261, 160.5, 272, 164, 276, 171.5, 175, 167, 161)
+tops = PackedFloat32Array(20, 18, 12, 20, 18, 14, 14, 16, 67, 15, 14, 23, 16, 13, 16, 15)
+texels = PackedFloat32Array(4, 4, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 3, 3, 3)
+groups = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1)
+kinds = PackedByteArray(2, 2, 2, 2, 2, 2, 2, 2, 3, 2, 2, 1, 1, 1, 0, 0)

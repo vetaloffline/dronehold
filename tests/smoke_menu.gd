@@ -1,6 +1,6 @@
 extends SceneTree
 ## Start the game like a player: menu → «Тест кулемета» → 0 slimes → a click spawns one → «Меню»
-## → «Грати» (level 1: map_03 with the crystal counter) → «Меню».
+## → «Грати» (level 1: map A with the crystal counter) → «Меню».
 ##   godot --headless --path . --script res://tests/smoke_menu.gd
 ## Exit 0 and «menu: 0 failed» = ok.
 
@@ -105,7 +105,7 @@ func _process(_dt: float) -> bool:
 			check(_press("Грати"), "menu has «Грати»")
 		60:
 			check(current_scene.name == "Main", "«Грати» opens the game (level 1)")
-			check(current_scene.has_node("Map03") and current_scene.has_node("GameHud") and Wallet.of(current_scene) != null, "the game has map_03, the crystal counter and a wallet")
+			check(current_scene.get("map") is GameMap and (current_scene.get("map") as Node).name == "MapA" and current_scene.has_node("GameHud") and Wallet.of(current_scene) != null, "the game has map A, the crystal counter and a wallet")
 			check(_press("Меню"), "the game has «Меню»")
 		80:
 			check(current_scene.name == "MainMenu", "«Меню» from the game goes back")
