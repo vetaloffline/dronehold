@@ -85,13 +85,13 @@ disable-model-invocation: true
   `.tres`, `.gdshader`, `.import` → крок 5 (тести гри).
 - Інакше → записати «тести гри не ганяли: змінено тільки <список верхніх папок>» → крок 6.
 
-Окремо: шлях у `.claude-plugin/` або `plugins/` → виконати `claude plugin validate .` і
-`claude plugin validate plugins/my-toolkit` (у sandbox, той самий розбір виводу, що для `.claude/skills/` нижче);
-exit ≠ 0 або рядок `✘` → СТОП. Хук guard-main.py підключений двічі: у `.claude/settings.json` і через плагін
-`my-toolkit@dronehold` (`plugins/my-toolkit/hooks/hooks.json`). Запис у settings.json не прибирати: політика
-організації може блокувати маркетплейс з папки (`is blocked by enterprise policy`), і тоді працює тільки він.
+Хук guard-main.py підключений двічі: у `.claude/settings.json` і через плагін `my-toolkit@vetaloffline-team` з
+репо `vetaloffline/vetaloffline-team-marketplace` (там копія `.agents/hooks/guard-main.py`). Запис у settings.json не
+прибирати: політика організації може блокувати маркетплейс (`is blocked by enterprise policy`), і тоді працює
+тільки він. Шлях `.agents/hooks/guard-main.py` або `.agents/hooks/test-guard-main.sh` у `CHANGED` → у звіт (крок 9)
+рядок «копію в vetaloffline-team-marketplace не оновлено: скопіювати файл, підняти version, `claude plugin tag --push`».
 
-Окремо: шлях у `.agents/hooks/`, `plugins/` або `.claude/settings.json` → виконати `bash .agents/hooks/test-guard-main.sh`
+Окремо: шлях у `.agents/hooks/` або `.claude/settings.json` → виконати `bash .agents/hooks/test-guard-main.sh`
 і `bash .agents/hooks/test-guard-rm.sh` (другий перевіряє й підключення хука в settings.json); у будь-якому є
 рядок `FAIL` або exit ≠ 0 → СТОП.
 
@@ -194,7 +194,7 @@ for t in run_tests smoke_game smoke_sandbox smoke_menu smoke_turret_360 smoke_ma
 - [x] Коміти: <git log --oneline origin/main..HEAD>
 - [x] Тести гри: <кожен тест: exit, підсумковий рядок>  |  [–] змінено тільки <папки>
 - [x] validate скілів: <✔ / ⚠ попередження>  |  [–] .claude/skills/ не змінювали
-- [x] validate маркетплейсу й my-toolkit: <✔ / ⚠ попередження>  |  [–] .claude-plugin/ і plugins/ не змінювали
+- [ ] копію в vetaloffline-team-marketplace не оновлено: …  |  [–] guard-main.py і test-guard-main.sh не змінювали
 - [x] test-guard-main.sh, test-guard-rm.sh: <результат кожного>  |  [–] .agents/hooks/ і settings.json не змінювали
 - [x] Чернетки цієї сесії: <видалено / лежать: …>; інші сесії й старі (не чіпав): <папки>
 - [x] Пуш: origin/<BRANCH>
