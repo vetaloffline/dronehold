@@ -1,0 +1,15 @@
+{
+  "name": "dronehold",
+  "description": "Плагіни Claude Code для репо dronehold; підключаються з .claude/settings.json",
+  "owner": {
+    "name": "Vitaliy",
+    "email": "1990vetalb1990@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "my-toolkit",
+      "source": "./plugins/my-toolkit",
+      "description": "Хук guard-main.py (захист main/master) і /my-toolkit:guard-test"
+    }
+  ]
+}

@@ -51,6 +51,17 @@
     "enabled": true,
     "excludedCommands": ["gh *", "git push *", "git pull *", "git fetch *", "codex exec *", "open *"]
   },
+  "extraKnownMarketplaces": {
+    "dronehold": {
+      "source": { "source": "directory", "path": "." }
+    }
+  },
+  "enabledPlugins": {
+    "my-toolkit@dronehold": true
+  },
+  "env": {
+    "CLAUDE_CODE_PLUGIN_DIRS": "~/dronehold/plugins/my-toolkit"
+  },
   "hooks": {
     "PreToolUse": [
       {

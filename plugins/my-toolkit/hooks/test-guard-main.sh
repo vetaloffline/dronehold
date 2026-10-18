@@ -1,0 +1,1 @@
+../../../.agents/hooks/test-guard-main.sh
