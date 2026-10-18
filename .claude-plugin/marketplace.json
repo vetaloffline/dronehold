@@ -1,6 +1,6 @@
 {
   "name": "dronehold",
-  "description": "Плагіни Claude Code для репо dronehold; підключаються з .claude/settings.json",
+  "description": "Claude Code plugins for the dronehold repo, enabled from .claude/settings.json",
   "owner": {
     "name": "Vitaliy",
     "email": "1990vetalb1990@gmail.com"
@@ -9,7 +9,7 @@
     {
       "name": "my-toolkit",
       "source": "./plugins/my-toolkit",
-      "description": "Хук guard-main.py (захист main/master) і /my-toolkit:guard-test"
+      "description": "guard-main.py hook (protects main/master) and /my-toolkit:guard-test"
     }
   ]
 }
