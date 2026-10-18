@@ -59,6 +59,9 @@
   "enabledPlugins": {
     "my-toolkit@dronehold": true
   },
+  "env": {
+    "CLAUDE_CODE_PLUGIN_DIRS": "~/dronehold/plugins/my-toolkit"
+  },
   "hooks": {
     "PreToolUse": [
       {
